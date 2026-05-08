@@ -1,0 +1,145 @@
+GOOGLE SHEETS DATABASE STRUCTURE - KONTENADAPT v1.2
+Mesin Kurasi Konten Bea Cukai / Beacukaipapin
+
+=== AUTO-SETUP ===
+Sheet dan header otomatis dibentuk saat endpoint backend pertama kali dipanggil.
+Tidak perlu membuat sheet manual. Jalankan fungsi setup() hanya jika ingin reset.
+
+Sheet 1: KONTEN_MASTER
+A: ID (auto: BC-YYMMDD-###)
+B: Timestamp
+C: Submitter
+D: Source_Link
+E: Source_Caption (termasuk nama file referensi jika ada)
+F: Source_Platform (Instagram/TikTok/YouTube/Manual)
+G: AI_Format_Detected
+H: AI_Hook_Analysis
+I: AI_Scene_Count
+J: AI_Emotion_Profile
+K: Risk_Score_Overall
+L: Risk_Government_Safe
+M: Risk_Copyright
+N: Risk_Misinterpret
+O: Risk_Sarcasm
+P: Selected_Category
+Q: Transformed_Caption
+R: Transformed_Hook
+S: Scene_1
+T: Scene_2
+U: Scene_3
+V: Scene_4
+W: Scene_5
+X: CTA_Text
+Y: Audio_Recommendation
+Z: Talent_Matched_Primary
+AA: Talent_Matched_Secondary
+AB: Talent_Match_Score
+AC: Talent_Match_Reason
+AD: Status (Draft/Review/Revisi/Approved/Produksi/Published/Rejected)
+AE: Approver_Notes
+AF: Assigned_Talent
+AG: Production_Deadline
+AH: Publish_Date
+AI: Views
+AJ: Likes
+AK: Shares
+AL: Saves
+AM: Comments
+AN: Retention_Rate
+AO: Performance_Score
+AP: Learning_Tag
+
+Sheet 2: USERS
+A: ID
+B: Nama
+C: Role (Admin/Koordinator/Creator/Viewer)
+D: Email
+E: Active
+
+Default users (v1.2):
+- Agung Hermawan: Koordinator
+- Imadelia Tasya Eartam: Creator
+- Alsyanda Kaltsum Maghfira: Creator
+- Imam Berlian: Creator
+- M. Arif Anugrah: Creator
+- Ficri Ramadiansyah: Creator
+- Harso Haryadi: Creator
+- Okwan Wamancha: Creator
+- Tri Purna Putra: Creator
+
+Sheet 3: ANALYTICS
+A: Content_ID
+B: Input_Date
+C: Views
+D: Likes
+E: Shares
+F: Saves
+G: Comments
+H: Retention_Rate
+I: Engagement_Rate
+J: Performance_Score
+
+Sheet 4: TALENT_PROFILE
+A: Talent_Name
+B: Talent_Role
+C: Content_Style
+D: Strength_Format_1
+E: Strength_Format_2
+F: Strength_Format_3
+G: Weakness_Format_1
+H: Avg_Views_Last_10
+I: Avg_Engagement_Rate
+J: Best_Performing_Category
+K: Best_Performing_Hook
+L: Availability_Status
+M: Total_Content_Count
+N: Success_Rate
+O: Character_Notes
+P: Preferred_Shoot_Days
+Q: Last_Updated
+
+Default talents (v1.2 - 9 Karakter):
+1. Agung Hermawan        | Koordinator / Bos       | Karakter bos, tegas namun bijaksana
+2. Imadelia Tasya Eartam | Petugas Frontdesk       | Petugas frontdesk cewek galau namun cekatan
+3. Alsyanda Kaltsum Maghfira | Petugas Frontdesk   | Petugas frontdesk cewek tegas
+4. Imam Berlian          | Petugas / Pengguna Jasa | Karakter petugas/pengguna jasa npc, penampil natural
+5. M. Arif Anugrah       | Petugas                 | Karakter petugas cowok tegas mengayomi
+6. Ficri Ramadiansyah    | Petugas / Talent        | Karakter petugas cowok berwibawa namun kocak dan hobi menyanyi
+7. Harso Haryadi         | Pengguna Jasa           | Karakter Pengguna Jasa Bapak-Bapak gagap ekspresif
+8. Okwan Wamancha        | Pengguna Jasa           | Karakter Pengguna Jasa Random
+9. Tri Purna Putra       | Multi Talent            | Karakter Multi Talent bisa jadi apa saja
+
+Sheet 5: KNOWLEDGE_BASE
+A: Category
+B: Tag
+C: Content_ID_Reference
+D: Format_Type
+E: Hook_Style
+F: Caption_Pattern
+G: CTA_Pattern
+H: Performance_Metric
+I: Insight
+J: Created_Date
+K: Active (TRUE/FALSE)
+
+Sheet 6: RISK_LOG
+A: Content_ID
+B: Risk_Type
+C: Risk_Level
+D: Risk_Description
+E: Mitigation_Action
+F: Reviewed_By
+G: Review_Date
+H: Resolution
+
+Sheet 7: SETTINGS
+A: Setting_Name
+B: Setting_Value
+C: Description
+
+Default settings:
+- OPENAI_API_KEY      -> (kosong, isi untuk aktifkan AI)
+- DEFAULT_MODEL       -> gpt-4o-mini
+- RISK_THRESHOLD      -> 7
+- AUTO_APPROVE_SCORE  -> 9
+- TALENT_MATCH_MIN_SCORE -> 70

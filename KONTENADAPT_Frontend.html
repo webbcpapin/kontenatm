@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KontenAdapt v1.2 - Mesin Kurasi Konten Bea Cukai</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        bc: {
+                            primary: '#1e3a5f',
+                            secondary: '#2c5282',
+                            accent: '#3182ce',
+                            light: '#ebf8ff',
+                            dark: '#0d1b2a',
+                            gold: '#d69e2e',
+                            success: '#38a169',
+                            warning: '#d69e2e',
+                            danger: '#e53e3e'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+        .animate-fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .risk-bar { height: 8px; border-radius: 4px; background: #e2e8f0; overflow: hidden; }
+        .risk-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+        .scene-card { border-left: 4px solid #3182ce; }
+        .talent-card { border: 2px solid transparent; transition: all 0.3s; }
+        .talent-card.primary { border-color: #38a169; background: #f0fff4; }
+        .talent-card.secondary { border-color: #d69e2e; background: #fffaf0; }
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .status-draft { background: #e2e8f0; color: #4a5568; }
+        .status-review { background: #fef3c7; color: #92400e; }
+        .status-approved { background: #d1fae5; color: #065f46; }
+        .status-production { background: #dbeafe; color: #1e40af; }
+        .status-published { background: #c6f6d5; color: #22543d; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+        .loading-spinner { border: 3px solid #f3f3f3; border-top: 3px solid #3182ce; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .tab-active { border-bottom: 3px solid #3182ce; color: #1e3a5f; font-weight: 600; }
+        .tab-inactive { border-bottom: 3px solid transparent; color: #718096; }
+        .tab-inactive:hover { color: #1e3a5f; }
+        .hook-option { cursor: pointer; transition: all 0.2s; }
+        .hook-option:hover { background: #ebf8ff; border-color: #3182ce; }
+        .hook-option.selected { background: #ebf8ff; border-color: #3182ce; border-width: 2px; }
+        .connection-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .connection-dot.connected { background: #38a169; box-shadow: 0 0 0 3px rgba(56,161,105,0.2); }
+        .connection-dot.disconnected { background: #e53e3e; box-shadow: 0 0 0 3px rgba(229,62,62,0.2); }
+        .connection-dot.checking { background: #d69e2e; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="glass fixed top-0 w-full z-50 border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-bc-primary rounded-lg flex items-center justify-center">
+                        <i class="fas fa-robot text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-bc-primary">KontenAdapt</h1>
+                        <p class="text-xs text-gray-500">Mesin Kurasi Konten Bea Cukai</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="hidden md:flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+                        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-active px-4 py-2 rounded-md text-sm transition-all">Dashboard</button>
+                        <button onclick="switchTab('input')" id="tab-input" class="tab-inactive px-4 py-2 rounded-md text-sm transition-all">Input Ide</button>
+                        <button onclick="switchTab('pipeline')" id="tab-pipeline" class="tab-inactive px-4 py-2 rounded-md text-sm transition-all">Pipeline</button>
+                        <button onclick="switchTab('analytics')" id="tab-analytics" class="tab-inactive px-4 py-2 rounded-md text-sm transition-all">Analytics</button>
+                        <button onclick="switchTab('talent')" id="tab-talent" class="tab-inactive px-4 py-2 rounded-md text-sm transition-all">Talent Pool</button>
+                        <button onclick="switchTab('settings')" id="tab-settings" class="tab-inactive px-4 py-2 rounded-md text-sm transition-all">Settings</button>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div id="connectionStatus" class="flex items-center px-3 py-1.5 rounded-full bg-gray-100 text-xs font-medium text-gray-600">
+                            <span class="connection-dot checking"></span>
+                            <span id="connectionText">Checking...</span>
+                        </div>
+                        <div class="w-8 h-8 bg-bc-accent rounded-full flex items-center justify-center text-white text-sm font-bold">AH</div>
+                        <span class="text-sm font-medium text-gray-700 hidden sm:block">Koordinator</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="pt-20 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+
+        <!-- TAB: DASHBOARD -->
+        <div id="view-dashboard" class="animate-fade-in">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Dashboard Konten</h2>
+                <p class="text-sm text-gray-500">Ringkasan ide aktif, pipeline produksi, dan performa konten.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                    <p class="text-xs text-gray-500">Konten Aktif</p>
+                    <p id="dashActive" class="text-3xl font-bold text-bc-primary mt-2">0</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                    <p class="text-xs text-gray-500">Menunggu Review</p>
+                    <p id="dashReview" class="text-3xl font-bold text-yellow-600 mt-2">0</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                    <p class="text-xs text-gray-500">Produksi</p>
+                    <p id="dashProduction" class="text-3xl font-bold text-blue-600 mt-2">0</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                    <p class="text-xs text-gray-500">Total Views</p>
+                    <p id="dashViews" class="text-3xl font-bold text-green-600 mt-2">0</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 class="font-bold text-gray-900 mb-4">Ide Terbaru</h3>
+                    <div id="dashRecentIdeas" class="space-y-3"></div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 class="font-bold text-gray-900 mb-4">Konten Performa Terbaik</h3>
+                    <div id="dashTopContent" class="space-y-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: INPUT IDE -->
+        <div id="view-input" class="hidden animate-fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Input Form -->
+                <div class="space-y-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center space-x-3 mb-6">
+                            <div class="w-10 h-10 bg-bc-light rounded-lg flex items-center justify-center">
+                                <i class="fas fa-lightbulb text-bc-accent text-lg"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-lg font-bold text-gray-900">Submit Ide Konten</h2>
+                                <p class="text-sm text-gray-500">Paste link viral atau deskripsi ide</p>
+                            </div>
+                        </div>
+
+                        <form id="ideaForm" class="space-y-5">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Platform Sumber</label>
+                                <div class="grid grid-cols-4 gap-2">
+                                    <button type="button" onclick="selectPlatform('Instagram')" class="platform-btn p-3 rounded-xl border-2 border-gray-200 hover:border-bc-accent transition-all text-center" data-platform="Instagram">
+                                        <i class="fab fa-instagram text-pink-600 text-xl mb-1"></i>
+                                        <p class="text-xs font-medium">Instagram</p>
+                                    </button>
+                                    <button type="button" onclick="selectPlatform('TikTok')" class="platform-btn p-3 rounded-xl border-2 border-gray-200 hover:border-bc-accent transition-all text-center" data-platform="TikTok">
+                                        <i class="fab fa-tiktok text-black text-xl mb-1"></i>
+                                        <p class="text-xs font-medium">TikTok</p>
+                                    </button>
+                                    <button type="button" onclick="selectPlatform('YouTube')" class="platform-btn p-3 rounded-xl border-2 border-gray-200 hover:border-bc-accent transition-all text-center" data-platform="YouTube">
+                                        <i class="fab fa-youtube text-red-600 text-xl mb-1"></i>
+                                        <p class="text-xs font-medium">YouTube</p>
+                                    </button>
+                                    <button type="button" onclick="selectPlatform('Manual')" class="platform-btn p-3 rounded-xl border-2 border-gray-200 hover:border-bc-accent transition-all text-center" data-platform="Manual">
+                                        <i class="fas fa-pen text-gray-600 text-xl mb-1"></i>
+                                        <p class="text-xs font-medium">Manual</p>
+                                    </button>
+                                </div>
+                                <input type="hidden" id="platform" value="">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Link / Caption Viral</label>
+                                <textarea id="sourceCaption" rows="4" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bc-accent focus:ring-2 focus:ring-bc-light outline-none resize-none text-sm" placeholder="Paste caption atau deskripsi konten viral di sini...&#10;Contoh: Baru hari pertama kerja sudah ditegur Kepala Kantor&#10;Scene: Aca dengan ekspresi lesu, bete, sedih"></textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Link Sumber (opsional)</label>
+                                <input type="url" id="sourceLink" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bc-accent focus:ring-2 focus:ring-bc-light outline-none text-sm" placeholder="https://instagram.com/reel/...">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Kategori Konten Bea Cukai</label>
+                                <select id="category" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bc-accent focus:ring-2 focus:ring-bc-light outline-none text-sm bg-white">
+                                    <option value="">Pilih Kategori...</option>
+                                    <option value="Edukasi Impor">Edukasi Impor</option>
+                                    <option value="Ekspor UMKM">Ekspor UMKM</option>
+                                    <option value="Penindakan">Penindakan</option>
+                                    <option value="Pelayanan">Pelayanan</option>
+                                    <option value="Internal">Internal</option>
+                                    <option value="Humanis">Humanis</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Screenshot / Referensi (opsional)</label>
+                                <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-bc-accent transition-all cursor-pointer" onclick="document.getElementById('fileUpload').click()">
+                                    <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                                    <p class="text-sm text-gray-500">Klik untuk upload screenshot/video referensi</p>
+                                    <input type="file" id="fileUpload" class="hidden" accept="image/*,video/*" onchange="handleFileUpload(this)">
+                                </div>
+                                <div id="filePreview" class="mt-2 hidden"></div>
+                            </div>
+
+                            <button type="submit" class="w-full bg-bc-primary hover:bg-bc-secondary text-white font-semibold py-4 rounded-xl transition-all flex items-center justify-center space-x-2">
+                                <i class="fas fa-magic"></i>
+                                <span>Generate Brief Konten</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Results Panel -->
+                <div id="resultsPanel" class="space-y-6 hidden">
+                    <!-- Loading State -->
+                    <div id="loadingState" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center hidden">
+                        <div class="loading-spinner mx-auto mb-4"></div>
+                        <p class="text-gray-600 font-medium">AI sedang menganalisis konten...</p>
+                        <p class="text-sm text-gray-400 mt-1">Breakdown -> Risk Filter -> Transform -> Talent Match</p>
+                    </div>
+
+                    <!-- AI Breakdown Card -->
+                    <div id="breakdownCard" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hidden">
+                        <div class="flex items-center space-x-3 mb-4">
+                            <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-brain text-purple-600"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-900">AI Breakdown Analysis</h3>
+                        </div>
+                        <div id="breakdownContent" class="space-y-3"></div>
+                    </div>
+
+                    <!-- Risk Filter Card -->
+                    <div id="riskCard" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hidden">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-shield-alt text-red-600"></i>
+                                </div>
+                                <h3 class="font-bold text-gray-900">Risk Filter Pemerintah</h3>
+                            </div>
+                            <span id="riskGrade" class="px-3 py-1 rounded-full text-sm font-bold"></span>
+                        </div>
+                        <div id="riskContent" class="space-y-3"></div>
+                    </div>
+
+                    <!-- Brief Card -->
+                    <div id="briefCard" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hidden">
+                        <div class="flex items-center space-x-3 mb-4">
+                            <div class="w-8 h-8 bg-bc-light rounded-lg flex items-center justify-center">
+                                <i class="fas fa-file-alt text-bc-accent"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-900">Brief Konten Generated</h3>
+                        </div>
+                        <div id="briefContent" class="space-y-4"></div>
+                    </div>
+
+                    <!-- Talent Matcher Card -->
+                    <div id="talentCard" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hidden">
+                        <div class="flex items-center space-x-3 mb-4">
+                            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-users text-green-600"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-900">Talent Matcher</h3>
+                        </div>
+                        <div id="talentContent" class="space-y-4"></div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div id="actionButtons" class="flex space-x-3 hidden">
+                        <button onclick="approveBrief()" class="flex-1 bg-bc-success hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center space-x-2">
+                            <i class="fas fa-check"></i>
+                            <span>Approve & Assign</span>
+                        </button>
+                        <button onclick="showRevisionModal()" class="flex-1 bg-bc-warning hover:bg-yellow-600 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center space-x-2">
+                            <i class="fas fa-edit"></i>
+                            <span>Revisi</span>
+                        </button>
+                        <button onclick="rejectBrief()" class="px-4 bg-bc-danger hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition-all">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: PIPELINE -->
+        <div id="view-pipeline" class="hidden animate-fade-in">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-bc-light rounded-lg flex items-center justify-center">
+                            <i class="fas fa-tasks text-bc-accent text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-900">Pipeline Konten</h2>
+                            <p class="text-sm text-gray-500">Tracking status seluruh konten</p>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <span class="status-badge status-draft">Draft: <span id="countDraft">0</span></span>
+                        <span class="status-badge status-review">Review: <span id="countReview">0</span></span>
+                        <span class="status-badge status-approved">Approved: <span id="countApproved">0</span></span>
+                        <span class="status-badge status-production">Produksi: <span id="countProduction">0</span></span>
+                        <span class="status-badge status-published">Published: <span id="countPublished">0</span></span>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="pipelineGrid"></div>
+        </div>
+
+        <!-- TAB: ANALYTICS -->
+        <div id="view-analytics" class="hidden animate-fade-in">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-bc-light rounded-lg flex items-center justify-center">
+                        <i class="fas fa-chart-line text-bc-accent text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-900">Analytics Dashboard</h2>
+                        <p class="text-sm text-gray-500">Performa konten & insight</p>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                    <div class="flex items-center justify-between">
+                        <div><p class="text-sm text-gray-500">Total Published</p><p class="text-2xl font-bold text-bc-primary" id="statPublished">0</p></div>
+                        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center"><i class="fas fa-upload text-green-600 text-xl"></i></div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                    <div class="flex items-center justify-between">
+                        <div><p class="text-sm text-gray-500">Total Views</p><p class="text-2xl font-bold text-bc-primary" id="statViews">0</p></div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center"><i class="fas fa-eye text-blue-600 text-xl"></i></div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                    <div class="flex items-center justify-between">
+                        <div><p class="text-sm text-gray-500">Avg Views</p><p class="text-2xl font-bold text-bc-primary" id="statAvgViews">0</p></div>
+                        <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center"><i class="fas fa-chart-bar text-purple-600 text-xl"></i></div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                    <div class="flex items-center justify-between">
+                        <div><p class="text-sm text-gray-500">Total Likes</p><p class="text-2xl font-bold text-bc-primary" id="statLikes">0</p></div>
+                        <div class="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center"><i class="fas fa-heart text-pink-600 text-xl"></i></div>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                    <h3 class="font-bold text-gray-900 mb-4">Performa per Talent</h3>
+                    <div id="talentChart" class="space-y-3"></div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                    <h3 class="font-bold text-gray-900 mb-4">Performa per Kategori</h3>
+                    <div id="categoryChart" class="space-y-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: TALENT POOL -->
+        <div id="view-talent" class="hidden animate-fade-in">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-bc-light rounded-lg flex items-center justify-center">
+                        <i class="fas fa-users text-bc-accent text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-900">Talent Pool</h2>
+                        <p class="text-sm text-gray-500">Profil & karakter talent konten Bea Cukai</p>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="talentGrid"></div>
+        </div>
+
+        <!-- TAB: SETTINGS -->
+        <div id="view-settings" class="hidden animate-fade-in">
+            <div class="max-w-2xl mx-auto">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-bc-light rounded-lg flex items-center justify-center">
+                            <i class="fas fa-cog text-bc-accent text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-900">Settings</h2>
+                            <p class="text-sm text-gray-500">Konfigurasi koneksi & preferensi</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Connection Status Card -->
+                <div id="backendStatusCard" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6 hidden">
+                    <div class="flex items-start space-x-4">
+                        <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-server text-green-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-bold text-gray-900">Backend Connected</h3>
+                            <p class="text-sm text-gray-500 mt-1" id="backendStatusText">Sheet ID dan API Key dikelola otomatis di backend.</p>
+                            <div class="mt-3 flex flex-wrap gap-2" id="backendBadges"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-link mr-1 text-bc-accent"></i>Google Apps Script Web App URL <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="gasUrl" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bc-accent focus:ring-2 focus:ring-bc-light outline-none text-sm" placeholder="https://script.google.com/macros/s/.../exec">
+                        <p class="text-xs text-gray-400 mt-1">URL dari deployment GAS (deploy as Web App). Satu-satunya konfigurasi yang diperlukan di frontend.</p>
+                    </div>
+
+                    <div class="border-t border-gray-100 pt-4">
+                        <p class="text-sm font-semibold text-gray-700 mb-3"><i class="fas fa-lock mr-1 text-gray-400"></i>Backend-Managed Settings</p>
+                        <p class="text-xs text-gray-400 mb-4">Pengaturan berikut dikelola di backend (Google Apps Script). Tidak perlu diubah di sini kecuali untuk override sementara.</p>
+
+                        <div class="space-y-4 opacity-75">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">OpenAI API Key</label>
+                                <input type="password" id="apiKey" class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm" placeholder="Tersimpan di backend" disabled>
+                                <p class="text-xs text-gray-400 mt-1">API Key diatur di sheet SETTINGS backend atau hardcode di CONFIG.</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Google Sheet ID</label>
+                                <input type="text" id="sheetId" class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm" placeholder="Tersimpan di backend" disabled>
+                                <p class="text-xs text-gray-400 mt-1">Sheet ID diatur di CONFIG backend (KONTENADAPT_Backend.gs).</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-100 pt-4">
+                        <p class="text-sm font-semibold text-gray-700 mb-3">Preferensi Sistem</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Risk Threshold</label>
+                                <input type="number" id="riskThreshold" value="7" min="1" max="10" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bc-accent focus:ring-2 focus:ring-bc-light outline-none text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Auto-Approve Score</label>
+                                <input type="number" id="autoApproveScore" value="9" min="1" max="10" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bc-accent focus:ring-2 focus:ring-bc-light outline-none text-sm">
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Minimum Talent Match Score</label>
+                            <input type="number" id="talentMinScore" value="70" min="0" max="100" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bc-accent focus:ring-2 focus:ring-bc-light outline-none text-sm">
+                        </div>
+                    </div>
+
+                    <div class="flex space-x-3">
+                        <button onclick="saveSettings()" class="flex-1 bg-bc-primary hover:bg-bc-secondary text-white font-semibold py-4 rounded-xl transition-all">
+                            <i class="fas fa-save mr-2"></i>Simpan Settings
+                        </button>
+                        <button onclick="testConnection()" class="px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-4 rounded-xl transition-all">
+                            <i class="fas fa-plug mr-2"></i>Test
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal: Approval -->
+    <div id="approvalModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-fade-in">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">Approve Brief Konten</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Assign ke Talent</label>
+                    <select id="assignTalent" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bc-accent outline-none text-sm">
+                        <option value="">Pilih Talent...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Deadline Produksi</label>
+                    <input type="date" id="deadline" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bc-accent outline-none text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Catatan Approver</label>
+                    <textarea id="approverNotes" rows="3" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bc-accent outline-none resize-none text-sm" placeholder="Catatan untuk tim produksi..."></textarea>
+                </div>
+            </div>
+            <div class="flex space-x-3 mt-6">
+                <button onclick="confirmApproval()" class="flex-1 bg-bc-success hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition-all">Approve</button>
+                <button onclick="closeModal('approvalModal')" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 rounded-xl transition-all">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Revision -->
+    <div id="revisionModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-fade-in">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">Revisi Brief</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Catatan Revisi</label>
+                    <textarea id="revisionNotes" rows="4" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bc-accent outline-none resize-none text-sm" placeholder="Jelaskan perubahan yang diinginkan..."></textarea>
+                </div>
+            </div>
+            <div class="flex space-x-3 mt-6">
+                <button onclick="confirmRevision()" class="flex-1 bg-bc-warning hover:bg-yellow-600 text-white font-semibold py-3 rounded-xl transition-all">Kirim Revisi</button>
+                <button onclick="closeModal('revisionModal')" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 rounded-xl transition-all">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Content Detail -->
+    <div id="detailModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 animate-fade-in">
+            <div class="flex items-start justify-between gap-4 mb-4">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900">Detail Konten</h3>
+                    <p id="detailMeta" class="text-sm text-gray-500 mt-1"></p>
+                </div>
+                <button onclick="closeModal('detailModal')" class="w-9 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="detailContent" class="space-y-4"></div>
+            <div class="mt-6 border-t border-gray-100 pt-5">
+                <h4 class="font-bold text-gray-900 mb-3">Update Produksi & Performa</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                    <select id="detailStatus" class="px-4 py-3 rounded-xl border border-gray-300 text-sm bg-white">
+                        <option value="Draft">Draft</option>
+                        <option value="Review">Review</option>
+                        <option value="Revisi">Revisi</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Produksi">Produksi</option>
+                        <option value="Published">Published</option>
+                    </select>
+                    <input type="date" id="detailPublishDate" class="px-4 py-3 rounded-xl border border-gray-300 text-sm">
+                    <button onclick="saveProductionStatus()" class="bg-bc-primary hover:bg-bc-secondary text-white font-semibold rounded-xl px-4 py-3 text-sm">Simpan Status</button>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
+                    <input type="number" id="metricViews" class="px-3 py-3 rounded-xl border border-gray-300 text-sm" placeholder="Views">
+                    <input type="number" id="metricLikes" class="px-3 py-3 rounded-xl border border-gray-300 text-sm" placeholder="Likes">
+                    <input type="number" id="metricShares" class="px-3 py-3 rounded-xl border border-gray-300 text-sm" placeholder="Shares">
+                    <input type="number" id="metricSaves" class="px-3 py-3 rounded-xl border border-gray-300 text-sm" placeholder="Saves">
+                    <input type="number" id="metricComments" class="px-3 py-3 rounded-xl border border-gray-300 text-sm" placeholder="Comments">
+                    <input type="number" id="metricRetention" class="px-3 py-3 rounded-xl border border-gray-300 text-sm" placeholder="Retention %">
+                </div>
+                <button onclick="saveAnalyticsMetrics()" class="mt-3 bg-bc-success hover:bg-green-700 text-white font-semibold rounded-xl px-4 py-3 text-sm">Simpan Analytics</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 hidden">
+        <div class="bg-gray-900 text-white px-6 py-3 rounded-xl shadow-lg flex items-center space-x-3 animate-fade-in">
+            <i id="toastIcon" class="fas fa-check-circle text-green-400"></i>
+            <span id="toastMessage">Notification</span>
+        </div>
+    </div>
+    <script>
+        // CONFIGURATION - Frontend hanya menyimpan GAS_URL
+        let CONFIG = {
+            GAS_URL: localStorage.getItem('gasUrl') || ''
+        };
+
+        let currentContentId = null;
+        let currentDetailId = null;
+        let currentBrief = null;
+        let currentTalentMatch = null;
+        let uploadedReferenceName = '';
+        let backendInfo = null;
+
+        // UI FUNCTIONS
+        function switchTab(tab) {
+            document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
+            document.getElementById('view-' + tab).classList.remove('hidden');
+
+            document.querySelectorAll('[id^="tab-"]').forEach(el => {
+                el.classList.remove('tab-active');
+                el.classList.add('tab-inactive');
+            });
+            document.getElementById('tab-' + tab).classList.remove('tab-inactive');
+            document.getElementById('tab-' + tab).classList.add('tab-active');
+
+            if (tab === 'dashboard') loadDashboard();
+            if (tab === 'pipeline') loadPipeline();
+            if (tab === 'analytics') loadAnalytics();
+            if (tab === 'talent') loadTalentPool();
+            if (tab === 'settings') loadSettings();
+        }
+
+        function selectPlatform(platform) {
+            document.querySelectorAll('.platform-btn').forEach(btn => {
+                btn.classList.remove('border-bc-accent', 'bg-bc-light');
+                btn.classList.add('border-gray-200');
+            });
+            document.querySelector('[data-platform="' + platform + '"]').classList.add('border-bc-accent', 'bg-bc-light');
+            document.querySelector('[data-platform="' + platform + '"]').classList.remove('border-gray-200');
+            document.getElementById('platform').value = platform;
+        }
+
+        function handleFileUpload(input) {
+            var file = input.files[0];
+            if (file) {
+                uploadedReferenceName = file.name;
+                var preview = document.getElementById('filePreview');
+                preview.classList.remove('hidden');
+                if (file.type.startsWith('image/')) {
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        preview.innerHTML = '<img src="' + e.target.result + '" class="max-h-40 rounded-lg mx-auto">';
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    preview.innerHTML = '<p class="text-sm text-gray-600 text-center"><i class="fas fa-video mr-2"></i>' + file.name + '</p>';
+                }
+            }
+        }
+
+        function showToast(message, type) {
+            type = type || 'success';
+            var toast = document.getElementById('toast');
+            var icon = document.getElementById('toastIcon');
+            var msg = document.getElementById('toastMessage');
+
+            msg.textContent = message;
+            icon.className = type === 'success' ? 'fas fa-check-circle text-green-400' : 
+                            type === 'error' ? 'fas fa-exclamation-circle text-red-400' :
+                            'fas fa-info-circle text-blue-400';
+
+            toast.classList.remove('hidden');
+            setTimeout(function() { toast.classList.add('hidden'); }, 3000);
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function escapeHtml(value) {
+            return String(value || '').replace(/[&<>"']/g, function(char) {
+                return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char];
+            });
+        }
+
+        function getInitials(name) {
+            if (!name) return '?';
+            var parts = name.trim().split(/\s+/);
+            if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+            return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+        }
+
+        // API FUNCTIONS
+        async function apiCall(action, method, data) {
+            method = method || 'GET';
+            data = data || null;
+
+            if (!CONFIG.GAS_URL) {
+                showToast('GAS URL belum diatur. Ke Settings terlebih dahulu.', 'error');
+                return null;
+            }
+
+            try {
+                var url = new URL(CONFIG.GAS_URL);
+                url.searchParams.append('action', action);
+                if (method === 'GET' && data) {
+                    Object.keys(data).forEach(function(key) {
+                        url.searchParams.append(key, data[key]);
+                    });
+                }
+
+                var options = {
+                    method: method,
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                };
+
+                if (method === 'POST' && data) {
+                    options.body = JSON.stringify(data);
+                }
+
+                var response = await fetch(url.toString(), options);
+                var result = await response.json();
+
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+
+                return result;
+            } catch (err) {
+                console.error('API Error:', err);
+                showToast('Error: ' + err.message, 'error');
+                return null;
+            }
+        }
+
+        // CONNECTION & CONFIG
+        async function testConnection() {
+            updateConnectionStatus('checking', 'Checking...');
+            var result = await apiCall('getConfig', 'GET');
+            if (result && result.status === 'ok') {
+                backendInfo = result;
+                updateConnectionStatus('connected', 'Connected v' + (result.version || '1.x'));
+                showToast('Backend terhubung! ' + (result.message || ''));
+                renderBackendStatus(result);
+                return true;
+            } else {
+                updateConnectionStatus('disconnected', 'Disconnected');
+                showToast('Gagal terhubung ke backend', 'error');
+                return false;
+            }
+        }
+
+        function updateConnectionStatus(status, text) {
+            var dot = document.querySelector('#connectionStatus .connection-dot');
+            var txt = document.getElementById('connectionText');
+            dot.className = 'connection-dot ' + status;
+            txt.textContent = text;
+        }
+
+        function renderBackendStatus(info) {
+            var card = document.getElementById('backendStatusCard');
+            if (!card) return;
+            card.classList.remove('hidden');
+            var text = document.getElementById('backendStatusText');
+            text.textContent = info.message || 'Backend terhubung. Sheet ID dan API Key dikelola di backend.';
+            var badges = document.getElementById('backendBadges');
+            var html = '';
+            if (info.initialized) {
+                html += '<span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium"><i class="fas fa-check mr-1"></i>Sheet Ready</span>';
+            } else {
+                html += '<span class="px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs font-medium"><i class="fas fa-exclamation mr-1"></i>Sheet: ' + (info.initReason || 'Belum diinisialisasi') + '</span>';
+            }
+            if (info.sheetIdConfigured) {
+                html += '<span class="px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium"><i class="fas fa-database mr-1"></i>Sheet ID OK</span>';
+            }
+            if (info.model) {
+                html += '<span class="px-2 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-medium"><i class="fas fa-robot mr-1"></i>' + info.model + '</span>';
+            }
+            badges.innerHTML = html;
+        }
+
+        // FORM SUBMISSION
+        document.getElementById('ideaForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            var platform = document.getElementById('platform').value;
+            var caption = document.getElementById('sourceCaption').value;
+            var link = document.getElementById('sourceLink').value;
+            var category = document.getElementById('category').value;
+
+            if (!platform) { showToast('Pilih platform dulu!', 'error'); return; }
+            if (!caption) { showToast('Isi caption/ide konten!', 'error'); return; }
+            if (!category) { showToast('Pilih kategori konten!', 'error'); return; }
+
+            document.getElementById('resultsPanel').classList.remove('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('breakdownCard').classList.add('hidden');
+            document.getElementById('riskCard').classList.add('hidden');
+            document.getElementById('briefCard').classList.add('hidden');
+            document.getElementById('talentCard').classList.add('hidden');
+            document.getElementById('actionButtons').classList.add('hidden');
+
+            var submitResult = await apiCall('submitIdea', 'POST', {
+                submitter: 'Koordinator',
+                sourceLink: link,
+                sourceCaption: caption,
+                sourcePlatform: platform,
+                selectedCategory: category,
+                referenceFileName: uploadedReferenceName
+            });
+
+            if (!submitResult || !submitResult.success) {
+                document.getElementById('loadingState').classList.add('hidden');
+                return;
+            }
+
+            currentContentId = submitResult.contentId;
+
+            var briefResult = await apiCall('generateBrief', 'POST', {
+                contentId: currentContentId,
+                sourceCaption: caption,
+                sourcePlatform: platform,
+                selectedCategory: category
+            });
+
+            document.getElementById('loadingState').classList.add('hidden');
+
+            if (!briefResult || !briefResult.success) {
+                showToast('Gagal generate brief', 'error');
+                return;
+            }
+
+            currentBrief = briefResult;
+            currentTalentMatch = briefResult.talentMatch;
+
+            renderBreakdown(briefResult.breakdown);
+            renderRisk(briefResult.risk);
+            renderBrief(briefResult.brief);
+            renderTalentMatch(briefResult.talentMatch);
+
+            document.getElementById('actionButtons').classList.remove('hidden');
+
+            showToast('Brief berhasil digenerate!');
+        });
+
+        // RENDER FUNCTIONS
+        function renderBreakdown(breakdown) {
+            var card = document.getElementById('breakdownCard');
+            var content = document.getElementById('breakdownContent');
+
+            content.innerHTML = '<div class="grid grid-cols-2 gap-3">' +
+                '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500">Format</p><p class="font-semibold text-gray-900">' + (breakdown.format_detected || 'Unknown') + '</p></div>' +
+                '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500">Durasi Estimasi</p><p class="font-semibold text-gray-900">' + (breakdown.estimated_duration || '30 detik') + '</p></div>' +
+                '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500">Scene Count</p><p class="font-semibold text-gray-900">' + (breakdown.scene_count || 2) + ' scene</p></div>' +
+                '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500">Emotion</p><p class="font-semibold text-gray-900">' + (breakdown.emotion_profile || 'Neutral') + '</p></div>' +
+                '</div>' +
+                '<div class="bg-purple-50 rounded-lg p-3"><p class="text-xs text-purple-600 font-medium mb-1">Hook Analysis</p><p class="text-sm text-gray-800">' + (breakdown.hook_analysis || 'Tidak terdeteksi') + '</p></div>' +
+                '<div class="bg-blue-50 rounded-lg p-3"><p class="text-xs text-blue-600 font-medium mb-1">Engagement Driver</p><p class="text-sm text-gray-800">' + (breakdown.engagement_driver || 'Unknown') + '</p></div>';
+
+            card.classList.remove('hidden');
+        }
+
+        function renderRisk(risk) {
+            var card = document.getElementById('riskCard');
+            var content = document.getElementById('riskContent');
+            var grade = document.getElementById('riskGrade');
+
+            var gradeColor = risk.overall_grade && risk.overall_grade.startsWith('A') ? 'bg-green-100 text-green-700' :
+                              risk.overall_grade && risk.overall_grade.startsWith('B') ? 'bg-blue-100 text-blue-700' :
+                              risk.overall_grade && risk.overall_grade.startsWith('C') ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-red-100 text-red-700';
+
+            grade.className = 'px-3 py-1 rounded-full text-sm font-bold ' + gradeColor;
+            grade.textContent = risk.overall_grade || 'N/A';
+
+            var risks = [
+                { label: 'Aman Instansi', score: risk.government_safe || 5, color: 'bg-green-500' },
+                { label: 'Copyright', score: risk.copyright_risk || 5, color: 'bg-yellow-500' },
+                { label: 'Multitafsir', score: risk.misinterpretation_risk || 5, color: 'bg-orange-500' },
+                { label: 'Sarkasme', score: risk.sarcasm_risk || 5, color: 'bg-red-500' },
+                { label: 'Konflik Institusi', score: risk.institution_conflict_risk || 5, color: 'bg-blue-500' }
+            ];
+
+            var html = '';
+            for (var i = 0; i < risks.length; i++) {
+                var r = risks[i];
+                var scoreColor = r.score >= 7 ? 'text-green-600' : r.score >= 5 ? 'text-yellow-600' : 'text-red-600';
+                html += '<div><div class="flex justify-between text-sm mb-1"><span class="text-gray-600">' + r.label + '</span><span class="font-semibold ' + scoreColor + '">' + r.score + '/10</span></div><div class="risk-bar"><div class="risk-fill ' + r.color + '" style="width: ' + (r.score * 10) + '%"></div></div></div>';
+            }
+
+            html += '<div class="mt-4 bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500 font-medium mb-1">Rekomendasi</p><p class="text-sm ' + (risk.recommendation === 'Aman' ? 'text-green-700' : 'text-yellow-700') + '">' + escapeHtml(risk.recommendation || 'Perlu review') + '</p></div>';
+
+            if (risk.risk_notes && risk.risk_notes.length > 0) {
+                html += '<div class="bg-yellow-50 rounded-lg p-3"><p class="text-xs text-yellow-600 font-medium mb-1">Catatan</p><ul class="text-sm text-gray-700 space-y-1">';
+                for (var j = 0; j < risk.risk_notes.length; j++) {
+                    html += '<li>- ' + escapeHtml(risk.risk_notes[j]) + '</li>';
+                }
+                html += '</ul></div>';
+            }
+
+            content.innerHTML = html;
+            card.classList.remove('hidden');
+        }
+
+        function renderBrief(brief) {
+            var card = document.getElementById('briefCard');
+            var content = document.getElementById('briefContent');
+
+            var scenes = brief.scene_breakdown || [];
+            var hooks = brief.hook_options || [];
+
+            var html = '<div class="bg-bc-light rounded-lg p-4 border border-bc-accent/20">' +
+                '<p class="text-xs text-bc-accent font-semibold uppercase tracking-wide mb-1">Caption Transformasi</p>' +
+                '<p class="text-gray-900 font-medium">' + (brief.transformed_caption || 'Belum tersedia') + '</p></div>';
+
+            html += '<div><p class="text-sm font-semibold text-gray-700 mb-2">Hook Options (Pilih 1)</p><div class="space-y-2">';
+            for (var i = 0; i < hooks.length; i++) {
+                html += '<div class="hook-option p-3 rounded-lg border border-gray-200" onclick="selectHook(this, ' + JSON.stringify(hooks[i]) + ')">' +
+                    '<div class="flex items-start space-x-3"><span class="w-6 h-6 bg-bc-primary text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">' + (i + 1) + '</span>' +
+                    '<p class="text-sm text-gray-800">' + escapeHtml(hooks[i]) + '</p></div></div>';
+            }
+            html += '</div></div>';
+
+            html += '<div><p class="text-sm font-semibold text-gray-700 mb-2">Scene Breakdown</p><div class="space-y-3">';
+            for (var s = 0; s < scenes.length; s++) {
+                var scene = scenes[s];
+                var propsHtml = '';
+                if (scene.props && scene.props.length > 0) {
+                    for (var p = 0; p < scene.props.length; p++) {
+                        propsHtml += '<span class="text-xs bg-white px-2 py-1 rounded border text-gray-600">' + scene.props[p] + '</span>';
+                    }
+                }
+                html += '<div class="scene-card bg-gray-50 rounded-lg p-3">' +
+                    '<div class="flex items-center space-x-2 mb-1"><span class="text-xs font-bold text-bc-accent">Scene ' + (scene.scene_number || s + 1) + '</span>' +
+                    '<span class="text-xs text-gray-400">' + (scene.timestamp || '0-5s') + '</span></div>' +
+                    '<p class="text-sm text-gray-800">' + (scene.description || 'Deskripsi scene') + '</p>' +
+                    '<div class="flex flex-wrap gap-2 mt-2">' +
+                    '<span class="text-xs bg-white px-2 py-1 rounded border text-gray-600"><i class="fas fa-user mr-1"></i>' + (scene.talent_action || 'Action') + '</span>' +
+                    '<span class="text-xs bg-white px-2 py-1 rounded border text-gray-600"><i class="fas fa-map-marker-alt mr-1"></i>' + (scene.location || 'Lokasi') + '</span>' +
+                    propsHtml + '</div></div>';
+            }
+            html += '</div></div>';
+
+            html += '<div class="grid grid-cols-2 gap-3">' +
+                '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500">CTA</p><p class="text-sm font-semibold text-gray-900">' + (brief.cta || 'Belum tersedia') + '</p></div>' +
+                '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500">Audio</p><p class="text-sm font-semibold text-gray-900">' + (brief.audio_recommendation || 'Belum tersedia') + '</p></div></div>';
+
+            html += '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500">Hashtags</p><p class="text-sm text-bc-accent">' + (brief.caption_hashtags || '#BeaCukaiMelayani') + '</p></div>';
+
+            html += '<div class="grid grid-cols-2 gap-3">' +
+                '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500">Tone</p><p class="text-sm font-semibold text-gray-900">' + (brief.tone || 'Educational-friendly') + '</p></div>' +
+                '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500">Target Audience</p><p class="text-sm font-semibold text-gray-900">' + (brief.target_audience || 'Masyarakat umum') + '</p></div></div>';
+
+            html += '<div class="bg-bc-primary/5 rounded-lg p-3 border border-bc-primary/20"><p class="text-xs text-bc-primary font-medium mb-1">Key Message</p><p class="text-sm text-gray-800">' + (brief.key_message || 'Layanan Bea Cukai siap membantu') + '</p></div>';
+
+            content.innerHTML = html;
+            card.classList.remove('hidden');
+        }
+
+        function renderTalentMatch(match) {
+            var card = document.getElementById('talentCard');
+            var content = document.getElementById('talentContent');
+
+            var html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
+
+            // Primary
+            html += '<div class="talent-card primary rounded-xl p-4">' +
+                '<div class="flex items-center justify-between mb-3"><div class="flex items-center space-x-3">' +
+                '<div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white text-lg font-bold">' + getInitials(match.primary_talent) + '</div>' +
+                '<div><p class="font-bold text-gray-900">' + (match.primary_talent || 'Belum tersedia') + '</p>' +
+                '<span class="text-xs bg-green-200 text-green-800 px-2 py-0.5 rounded-full">Primary Match</span></div></div>' +
+                '<div class="text-right"><p class="text-2xl font-bold text-green-600">' + (match.primary_score || 0) + '%</p><p class="text-xs text-gray-500">Match Score</p></div></div>' +
+                '<p class="text-sm text-gray-700 mb-3">' + (match.primary_reason || 'Alasan matching tidak tersedia') + '</p>' +
+                '<div class="bg-white rounded-lg p-2 text-xs text-gray-600"><i class="fas fa-briefcase mr-1"></i> ' + (match.talent_brief || 'Brief untuk talent') + '</div></div>';
+
+            // Secondary
+            html += '<div class="talent-card secondary rounded-xl p-4">' +
+                '<div class="flex items-center justify-between mb-3"><div class="flex items-center space-x-3">' +
+                '<div class="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center text-white text-lg font-bold">' + getInitials(match.secondary_talent) + '</div>' +
+                '<div><p class="font-bold text-gray-900">' + (match.secondary_talent || 'Belum tersedia') + '</p>' +
+                '<span class="text-xs bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full">Secondary Match</span></div></div>' +
+                '<div class="text-right"><p class="text-2xl font-bold text-yellow-600">' + (match.secondary_score || 0) + '%</p><p class="text-xs text-gray-500">Match Score</p></div></div>' +
+                '<p class="text-sm text-gray-700">' + (match.secondary_reason || 'Alasan matching tidak tersedia') + '</p></div></div>';
+
+            html += '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500 font-medium mb-1"><i class="fas fa-lightbulb mr-1"></i>Rekomendasi Syuting</p><p class="text-sm text-gray-800">' + (match.shooting_recommendation || 'Jadwalkan sesuai availability talent') + '</p></div>';
+
+            html += '<div class="bg-bc-light rounded-lg p-3 border border-bc-accent/20"><p class="text-xs text-bc-accent font-medium mb-1"><i class="fas fa-chart-line mr-1"></i>Analisis Matching</p><p class="text-sm text-gray-800">' + (match.match_analysis || 'Analisis tidak tersedia') + '</p></div>';
+
+            content.innerHTML = html;
+            card.classList.remove('hidden');
+        }
+
+        function selectHook(element, hook) {
+            var options = document.querySelectorAll('.hook-option');
+            for (var i = 0; i < options.length; i++) {
+                options[i].classList.remove('selected');
+            }
+            element.classList.add('selected');
+        }
+
+        // APPROVAL WORKFLOW
+        function approveBrief() {
+            if (!currentContentId) return;
+
+            var select = document.getElementById('assignTalent');
+            select.innerHTML = '<option value="">Pilih Talent...</option>';
+
+            if (currentTalentMatch) {
+                if (currentTalentMatch.primary_talent) {
+                    select.innerHTML += '<option value="' + currentTalentMatch.primary_talent + '">' + currentTalentMatch.primary_talent + ' (Primary - ' + currentTalentMatch.primary_score + '%)</option>';
+                }
+                if (currentTalentMatch.secondary_talent) {
+                    select.innerHTML += '<option value="' + currentTalentMatch.secondary_talent + '">' + currentTalentMatch.secondary_talent + ' (Secondary - ' + currentTalentMatch.secondary_score + '%)</option>';
+                }
+            }
+
+            document.getElementById('approvalModal').classList.remove('hidden');
+        }
+
+        async function confirmApproval() {
+            var talent = document.getElementById('assignTalent').value;
+            var deadline = document.getElementById('deadline').value;
+            var notes = document.getElementById('approverNotes').value;
+
+            if (!talent) { showToast('Pilih talent dulu!', 'error'); return; }
+
+            var result = await apiCall('approveContent', 'POST', {
+                contentId: currentContentId,
+                assignedTalent: talent,
+                deadline: deadline,
+                approverNotes: notes
+            });
+
+            if (result && result.success) {
+                showToast('Konten approved dan assigned ke ' + talent);
+                closeModal('approvalModal');
+                document.getElementById('actionButtons').classList.add('hidden');
+                loadPipeline();
+            }
+        }
+
+        function showRevisionModal() {
+            document.getElementById('revisionModal').classList.remove('hidden');
+        }
+
+        async function confirmRevision() {
+            var notes = document.getElementById('revisionNotes').value;
+            if (!notes) { showToast('Isi catatan revisi!', 'error'); return; }
+
+            var result = await apiCall('requestRevision', 'POST', {
+                contentId: currentContentId,
+                revisionNotes: notes
+            });
+
+            if (result && result.success) {
+                showToast('Revisi dikirim ke tim!');
+                closeModal('revisionModal');
+                document.getElementById('actionButtons').classList.add('hidden');
+                loadPipeline();
+            }
+        }
+
+        async function rejectBrief() {
+            if (!currentContentId) return;
+
+            var reason = prompt('Alasan penolakan:');
+            if (!reason) return;
+
+            var result = await apiCall('rejectContent', 'POST', {
+                contentId: currentContentId,
+                rejectReason: reason
+            });
+
+            if (result && result.success) {
+                showToast('Konten ditolak');
+                document.getElementById('actionButtons').classList.add('hidden');
+                loadPipeline();
+            }
+        }
+
+        // PIPELINE & ANALYTICS
+        async function loadDashboard() {
+            var pipeline = await apiCall('getPipeline');
+            var analytics = await apiCall('getAnalytics');
+            if (!pipeline) return;
+
+            var draft = pipeline.draft || [];
+            var review = pipeline.review || [];
+            var approved = pipeline.approved || [];
+            var production = pipeline.inProduction || [];
+            var published = pipeline.published || [];
+            var revision = pipeline.rejected || [];
+            var activeCount = draft.length + review.length + approved.length + production.length + revision.length;
+
+            document.getElementById('dashActive').textContent = activeCount;
+            document.getElementById('dashReview').textContent = review.length;
+            document.getElementById('dashProduction').textContent = production.length;
+            document.getElementById('dashViews').textContent = formatNumber((analytics && analytics.totalViews) || 0);
+
+            var recent = draft.concat(review, approved, production, revision, published).slice(-5).reverse();
+            document.getElementById('dashRecentIdeas').innerHTML = recent.length ? recent.map(function(item) {
+                return '<button class="w-full text-left border border-gray-100 rounded-lg p-3 hover:border-bc-accent" onclick="viewContentDetail(' + JSON.stringify(item.id) + ')">' +
+                    '<div class="flex justify-between gap-3"><p class="text-sm font-semibold text-gray-900 line-clamp-1">' + escapeHtml(item.sourceCaption || item.id) + '</p><span class="text-xs text-gray-500">' + escapeHtml(item.status || '-') + '</span></div>' +
+                    '<p class="text-xs text-gray-500 mt-1">' + escapeHtml(item.category || 'Tanpa kategori') + ' \u00B7 PIC: ' + escapeHtml(item.talent || 'Belum assign') + '</p></button>';
+            }).join('') : '<p class="text-sm text-gray-400">Belum ada ide tersimpan.</p>';
+
+            document.getElementById('dashTopContent').innerHTML = published.length ? published.slice(0, 5).map(function(item) {
+                return '<button class="w-full text-left border border-gray-100 rounded-lg p-3 hover:border-bc-accent" onclick="viewContentDetail(' + JSON.stringify(item.id) + ')">' +
+                    '<p class="text-sm font-semibold text-gray-900 line-clamp-1">' + escapeHtml(item.sourceCaption || item.id) + '</p>' +
+                    '<p class="text-xs text-gray-500 mt-1">' + escapeHtml(item.category || 'Tanpa kategori') + ' \u00B7 Published</p></button>';
+            }).join('') : '<p class="text-sm text-gray-400">Belum ada konten published.</p>';
+        }
+
+        async function loadPipeline() {
+            var result = await apiCall('getPipeline');
+            if (!result) return;
+
+            document.getElementById('countDraft').textContent = (result.draft && result.draft.length) || 0;
+            document.getElementById('countReview').textContent = (result.review && result.review.length) || 0;
+            document.getElementById('countApproved').textContent = (result.approved && result.approved.length) || 0;
+            document.getElementById('countProduction').textContent = (result.inProduction && result.inProduction.length) || 0;
+            document.getElementById('countPublished').textContent = (result.published && result.published.length) || 0;
+
+            var allItems = [];
+            if (result.draft) for (var d = 0; d < result.draft.length; d++) allItems.push(Object.assign({}, result.draft[d], {statusLabel: 'Draft', statusClass: 'status-draft'}));
+            if (result.review) for (var r = 0; r < result.review.length; r++) allItems.push(Object.assign({}, result.review[r], {statusLabel: 'Review', statusClass: 'status-review'}));
+            if (result.approved) for (var a = 0; a < result.approved.length; a++) allItems.push(Object.assign({}, result.approved[a], {statusLabel: 'Approved', statusClass: 'status-approved'}));
+            if (result.inProduction) for (var ip = 0; ip < result.inProduction.length; ip++) allItems.push(Object.assign({}, result.inProduction[ip], {statusLabel: 'Produksi', statusClass: 'status-production'}));
+            if (result.published) for (var pub = 0; pub < result.published.length; pub++) allItems.push(Object.assign({}, result.published[pub], {statusLabel: 'Published', statusClass: 'status-published'}));
+            if (result.rejected) for (var rej = 0; rej < result.rejected.length; rej++) allItems.push(Object.assign({}, result.rejected[rej], {statusLabel: result.rejected[rej].status === 'Revisi' ? 'Revisi' : 'Rejected', statusClass: 'status-rejected'}));
+
+            var grid = document.getElementById('pipelineGrid');
+            if (allItems.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-12"><i class="fas fa-inbox text-4xl text-gray-300 mb-3"></i><p class="text-gray-500">Belum ada konten dalam pipeline</p></div>';
+                return;
+            }
+
+            var html = '';
+            for (var i = 0; i < allItems.length; i++) {
+                var item = allItems[i];
+                html += '<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 card-hover cursor-pointer" onclick="viewContentDetail(' + JSON.stringify(item.id) + ')">' +
+                    '<div class="flex justify-between items-start mb-2"><span class="text-xs font-mono text-gray-400">' + escapeHtml(item.id) + '</span>' +
+                    '<span class="status-badge ' + item.statusClass + '">' + item.statusLabel + '</span></div>' +
+                    '<p class="text-sm font-medium text-gray-900 line-clamp-2 mb-2">' + escapeHtml(item.sourceCaption || 'Tidak ada caption') + '</p>' +
+                    '<div class="flex items-center justify-between text-xs text-gray-500">' +
+                    '<span><i class="fas fa-tag mr-1"></i>' + escapeHtml(item.category || 'Uncategorized') + '</span>' +
+                    '<span><i class="fas fa-user mr-1"></i>' + escapeHtml(item.talent || 'Unassigned') + '</span></div>';
+
+                if (item.riskScore) {
+                    var riskColor = item.riskScore >= 7 ? 'bg-green-500' : item.riskScore >= 5 ? 'bg-yellow-500' : 'bg-red-500';
+                    html += '<div class="mt-2 flex items-center space-x-2"><div class="risk-bar flex-1"><div class="risk-fill ' + riskColor + '" style="width: ' + (item.riskScore * 10) + '%"></div></div><span class="text-xs font-semibold">' + item.riskScore + '</span></div>';
+                }
+                html += '</div>';
+            }
+            grid.innerHTML = html;
+        }
+
+        async function loadAnalytics() {
+            var result = await apiCall('getAnalytics');
+            if (!result) return;
+
+            document.getElementById('statPublished').textContent = result.totalPublished || 0;
+            document.getElementById('statViews').textContent = formatNumber(result.totalViews || 0);
+            document.getElementById('statAvgViews').textContent = formatNumber(result.avgViews || 0);
+            document.getElementById('statLikes').textContent = formatNumber(result.totalLikes || 0);
+
+            var talentChart = document.getElementById('talentChart');
+            var talentStats = result.talentStats || {};
+
+            if (Object.keys(talentStats).length === 0) {
+                talentChart.innerHTML = '<p class="text-gray-400 text-center py-8">Belum ada data talent</p>';
+            } else {
+                var maxViews = 0;
+                for (var key in talentStats) {
+                    if (talentStats[key].totalViews > maxViews) maxViews = talentStats[key].totalViews;
+                }
+
+                var html = '';
+                for (var name in talentStats) {
+                    var stats = talentStats[name];
+                    var percentage = maxViews > 0 ? (stats.totalViews / maxViews) * 100 : 0;
+                    html += '<div class="flex items-center space-x-3"><div class="w-24 text-sm font-medium text-gray-700 truncate">' + name + '</div>' +
+                        '<div class="flex-1"><div class="risk-bar"><div class="risk-fill bg-bc-accent" style="width: ' + percentage + '%"></div></div></div>' +
+                        '<div class="text-right"><p class="text-sm font-bold text-gray-900">' + formatNumber(stats.totalViews) + '</p>' +
+                        '<p class="text-xs text-gray-500">' + stats.count + ' konten</p></div></div>';
+                }
+                talentChart.innerHTML = html;
+            }
+
+            var categoryChart = document.getElementById('categoryChart');
+            var categoryStats = result.categoryStats || {};
+
+            if (Object.keys(categoryStats).length === 0) {
+                categoryChart.innerHTML = '<p class="text-gray-400 text-center py-8">Belum ada data kategori</p>';
+            } else {
+                var maxCatViews = 0;
+                for (var ckey in categoryStats) {
+                    if (categoryStats[ckey].totalViews > maxCatViews) maxCatViews = categoryStats[ckey].totalViews;
+                }
+
+                var chtml = '';
+                for (var cat in categoryStats) {
+                    var cstats = categoryStats[cat];
+                    var cpercentage = maxCatViews > 0 ? (cstats.totalViews / maxCatViews) * 100 : 0;
+                    chtml += '<div class="flex items-center space-x-3"><div class="w-24 text-sm font-medium text-gray-700">' + cat + '</div>' +
+                        '<div class="flex-1"><div class="risk-bar"><div class="risk-fill bg-bc-gold" style="width: ' + cpercentage + '%"></div></div></div>' +
+                        '<div class="text-right"><p class="text-sm font-bold text-gray-900">' + formatNumber(cstats.totalViews) + '</p>' +
+                        '<p class="text-xs text-gray-500">' + cstats.count + ' konten</p></div></div>';
+                }
+                categoryChart.innerHTML = chtml;
+            }
+        }
+
+        async function loadTalentPool() {
+            var result = await apiCall('getTalentProfiles');
+            if (!result || !result.talents) return;
+
+            var grid = document.getElementById('talentGrid');
+
+            if (result.talents.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-400">Belum ada data talent</div>';
+                return;
+            }
+
+            var html = '';
+            for (var i = 0; i < result.talents.length; i++) {
+                var talent = result.talents[i];
+                var strengthHtml = '';
+                for (var s = 0; s < talent.strengthFormats.length; s++) {
+                    strengthHtml += '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">' + talent.strengthFormats[s] + '</span>';
+                }
+
+                var availColor = talent.availability === 'Available' ? 'bg-green-500' : 'bg-red-500';
+                var successColor = talent.successRate >= 70 ? 'text-green-600' : 'text-yellow-600';
+
+                // Character note badge styling
+                var characterBadge = '';
+                if (talent.characterNotes) {
+                    characterBadge = '<div class="mt-3 bg-bc-primary/5 rounded-lg p-3 border border-bc-primary/10"><p class="text-xs text-bc-primary font-medium mb-1"><i class="fas fa-theater-masks mr-1"></i>Karakter</p><p class="text-sm text-gray-800">' + escapeHtml(talent.characterNotes) + '</p></div>';
+                }
+
+                html += '<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 card-hover">' +
+                    '<div class="flex items-center space-x-3 mb-4"><div class="w-14 h-14 bg-bc-primary rounded-full flex items-center justify-center text-white text-xl font-bold">' + getInitials(talent.name) + '</div>' +
+                    '<div class="flex-1 min-w-0"><h3 class="font-bold text-gray-900 truncate">' + talent.name + '</h3><p class="text-xs text-gray-500">' + (talent.role || 'Talent') + '</p></div></div>' +
+                    '<div class="space-y-3">' +
+                    '<div class="flex justify-between text-sm"><span class="text-gray-500">Avg Views</span><span class="font-semibold text-bc-primary">' + formatNumber(talent.avgViews) + '</span></div>' +
+                    '<div class="flex justify-between text-sm"><span class="text-gray-500">Engagement</span><span class="font-semibold text-bc-primary">' + talent.avgEngagement + '%</span></div>' +
+                    '<div class="flex justify-between text-sm"><span class="text-gray-500">Success Rate</span><span class="font-semibold ' + successColor + '">' + talent.successRate + '%</span></div>' +
+                    '<div class="flex justify-between text-sm"><span class="text-gray-500">Total Konten</span><span class="font-semibold text-gray-900">' + talent.totalContent + '</span></div></div>' +
+                    '<div class="mt-4 pt-4 border-t border-gray-100"><p class="text-xs text-gray-500 mb-2">Strengths:</p><div class="flex flex-wrap gap-1">' + strengthHtml + '</div></div>' +
+                    '<div class="mt-3"><p class="text-xs text-gray-500 mb-1">Best Category:</p><span class="text-xs bg-bc-light text-bc-primary px-2 py-1 rounded font-medium">' + (talent.bestCategory || 'Belum teridentifikasi') + '</span></div>' +
+                    characterBadge +
+                    '<div class="mt-3 flex items-center space-x-2"><span class="w-2 h-2 rounded-full ' + availColor + '"></span><span class="text-xs text-gray-600">' + (talent.availability || 'Unknown') + '</span></div></div>';
+            }
+            grid.innerHTML = html;
+        }
+
+        function loadSettings() {
+            document.getElementById('gasUrl').value = CONFIG.GAS_URL;
+            // API Key dan Sheet ID sekarang backend-managed, tampilkan info saja
+            document.getElementById('apiKey').value = backendInfo ? 'Tersimpan di backend' : '';
+            document.getElementById('sheetId').value = backendInfo ? 'Dikelola backend' : '';
+        }
+
+        function saveSettings() {
+            CONFIG.GAS_URL = document.getElementById('gasUrl').value;
+            localStorage.setItem('gasUrl', CONFIG.GAS_URL);
+
+            // Hanya kirim preferensi ke backend, bukan API key / sheet ID
+            if (CONFIG.GAS_URL) {
+                apiCall('saveSettings', 'POST', {
+                    RISK_THRESHOLD: document.getElementById('riskThreshold').value,
+                    AUTO_APPROVE_SCORE: document.getElementById('autoApproveScore').value,
+                    TALENT_MATCH_MIN_SCORE: document.getElementById('talentMinScore').value
+                });
+            }
+
+            showToast('Settings disimpan!');
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toString();
+        }
+
+        async function viewContentDetail(contentId) {
+            var result = await apiCall('getContentDetail', 'GET', { id: contentId });
+            if (!result || result.error) {
+                showToast(result && result.error ? result.error : 'Detail tidak ditemukan', 'error');
+                return;
+            }
+
+            currentDetailId = contentId;
+            document.getElementById('detailMeta').textContent = result.id + ' \u00B7 ' + (result.status || '-') + ' \u00B7 ' + (result.category || 'Tanpa kategori');
+            document.getElementById('detailStatus').value = result.status || 'Draft';
+            document.getElementById('detailPublishDate').value = result.publishDate ? String(result.publishDate).slice(0, 10) : '';
+            document.getElementById('metricViews').value = result.views || '';
+            document.getElementById('metricLikes').value = result.likes || '';
+            document.getElementById('metricShares').value = result.shares || '';
+            document.getElementById('metricSaves').value = result.saves || '';
+            document.getElementById('metricComments').value = result.comments || '';
+            document.getElementById('metricRetention').value = result.retention || '';
+
+            var scenes = (result.scenes || []).map(function(scene, index) {
+                var parsed = scene;
+                try { parsed = JSON.parse(scene).description || scene; } catch (e) {}
+                return '<li class="text-sm text-gray-700">' + (index + 1) + '. ' + escapeHtml(parsed) + '</li>';
+            }).join('');
+
+            document.getElementById('detailContent').innerHTML =
+                '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
+                '<div class="bg-gray-50 rounded-xl p-4"><p class="text-xs text-gray-500 mb-1">Caption Viral</p><p class="text-sm text-gray-800">' + escapeHtml(result.sourceCaption || '-') + '</p></div>' +
+                '<div class="bg-gray-50 rounded-xl p-4"><p class="text-xs text-gray-500 mb-1">Caption Bea Cukai</p><p class="text-sm text-gray-800">' + escapeHtml(result.transformedCaption || '-') + '</p></div>' +
+                '</div>' +
+                '<div class="grid grid-cols-1 md:grid-cols-3 gap-3">' +
+                '<div class="bg-bc-primary/5 rounded-xl p-3"><p class="text-xs text-bc-primary">Format</p><p class="text-sm font-semibold">' + escapeHtml(result.formatDetected || '-') + '</p></div>' +
+                '<div class="bg-bc-primary/5 rounded-xl p-3"><p class="text-xs text-bc-primary">Hook</p><p class="text-sm font-semibold">' + escapeHtml(result.hookAnalysis || '-') + '</p></div>' +
+                '<div class="bg-bc-primary/5 rounded-xl p-3"><p class="text-xs text-bc-primary">Risk Score</p><p class="text-sm font-semibold">' + escapeHtml(result.riskScore || '-') + '</p></div>' +
+                '</div>' +
+                '<div class="bg-white border border-gray-100 rounded-xl p-4"><p class="text-xs text-gray-500 mb-2">Scene Breakdown</p><ul class="space-y-1">' + (scenes || '<li class="text-sm text-gray-400">Belum ada scene.</li>') + '</ul></div>' +
+                '<div class="grid grid-cols-1 md:grid-cols-3 gap-3">' +
+                '<div class="bg-gray-50 rounded-xl p-3"><p class="text-xs text-gray-500">CTA</p><p class="text-sm">' + escapeHtml(result.cta || '-') + '</p></div>' +
+                '<div class="bg-gray-50 rounded-xl p-3"><p class="text-xs text-gray-500">Audio</p><p class="text-sm">' + escapeHtml(result.audio || '-') + '</p></div>' +
+                '<div class="bg-gray-50 rounded-xl p-3"><p class="text-xs text-gray-500">PIC</p><p class="text-sm">' + escapeHtml(result.assignedTalent || result.talentPrimary || '-') + '</p></div>' +
+                '</div>';
+
+            document.getElementById('detailModal').classList.remove('hidden');
+        }
+
+        async function saveProductionStatus() {
+            if (!currentDetailId) return;
+            var result = await apiCall('updateProduction', 'POST', {
+                contentId: currentDetailId,
+                status: document.getElementById('detailStatus').value,
+                publishDate: document.getElementById('detailPublishDate').value
+            });
+            if (result && result.success) {
+                showToast('Status produksi disimpan');
+                loadPipeline();
+                loadDashboard();
+            }
+        }
+
+        async function saveAnalyticsMetrics() {
+            if (!currentDetailId) return;
+            var result = await apiCall('updateAnalytics', 'POST', {
+                contentId: currentDetailId,
+                views: document.getElementById('metricViews').value,
+                likes: document.getElementById('metricLikes').value,
+                shares: document.getElementById('metricShares').value,
+                saves: document.getElementById('metricSaves').value,
+                comments: document.getElementById('metricComments').value,
+                retentionRate: document.getElementById('metricRetention').value
+            });
+            if (result && result.success) {
+                showToast('Analytics disimpan. Performance score: ' + result.performanceScore);
+                loadAnalytics();
+                loadDashboard();
+            }
+        }
+
+        // INITIALIZATION
+        document.addEventListener('DOMContentLoaded', function() {
+            CONFIG.GAS_URL = localStorage.getItem('gasUrl') || '';
+
+            selectPlatform('Instagram');
+
+            if (!CONFIG.GAS_URL) {
+                showToast('Silakan atur GAS URL di Settings terlebih dahulu', 'error');
+                updateConnectionStatus('disconnected', 'No URL');
+            } else {
+                // Auto-test connection dan load dashboard
+                testConnection().then(function(ok) {
+                    if (ok) {
+                        loadDashboard();
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
