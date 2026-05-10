@@ -2,8 +2,8 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KontenAdapt v1.2 - Mesin Kurasi Konten Bea Cukai</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KontenAdapt v2.0 - Mesin Kurasi Konten Bea Cukai</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -48,28 +48,34 @@
         .status-production { background: #dbeafe; color: #1e40af; }
         .status-published { background: #c6f6d5; color: #22543d; }
         .status-rejected { background: #fee2e2; color: #991b1b; }
-        .loading-spinner { border: 3px solid #f3f3f3; border-top: 3px solid #3182ce; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .tab-active { border-bottom: 3px solid #3182ce; color: #1e3a5f; font-weight: 600; }
         .tab-inactive { border-bottom: 3px solid transparent; color: #718096; }
         .tab-inactive:hover { color: #1e3a5f; }
-        .hook-option { cursor: pointer; transition: all 0.2s; }
-        .hook-option:hover { background: #ebf8ff; border-color: #3182ce; }
-        .hook-option.selected { background: #ebf8ff; border-color: #3182ce; border-width: 2px; }
         .connection-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
         .connection-dot.connected { background: #38a169; box-shadow: 0 0 0 3px rgba(56,161,105,0.2); }
         .connection-dot.disconnected { background: #e53e3e; box-shadow: 0 0 0 3px rgba(229,62,62,0.2); }
         .connection-dot.checking { background: #d69e2e; animation: pulse 1.5s infinite; }
         .workflow-step { display: flex; align-items: center; gap: 0.75rem; }
-        .workflow-line { height: 2px; flex: 1; background: #dbeafe; }
         .editor-label { display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem; }
         .editor-field { width: 100%; border: 1px solid #d1d5db; border-radius: 0.75rem; padding: 0.75rem 1rem; font-size: 0.875rem; outline: none; }
         .editor-field:focus { border-color: #3182ce; box-shadow: 0 0 0 3px #ebf8ff; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        .mobile-menu { display: none; position: fixed; top: 64px; left: 0; right: 0; background: white; border-bottom: 1px solid #e5e7eb; z-index: 40; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .mobile-menu.open { display: block; }
+        .mobile-menu-item { display: block; width: 100%; text-align: left; padding: 14px 20px; font-size: 0.9rem; color: #4a5568; border-bottom: 1px solid #f3f4f6; transition: all 0.2s; }
+        .mobile-menu-item:hover { background: #ebf8ff; color: #1e3a5f; }
+        .mobile-menu-item.active { background: #ebf8ff; color: #1e3a5f; font-weight: 600; border-left: 4px solid #3182ce; }
+
+        .percentage-slider { -webkit-appearance: none; width: 100%; height: 8px; border-radius: 4px; background: #e2e8f0; outline: none; }
+        .percentage-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; border-radius: 50%; background: #3182ce; cursor: pointer; box-shadow: 0 2px 6px rgba(49,130,206,0.4); }
+        .percentage-slider::-moz-range-thumb { width: 24px; height: 24px; border-radius: 50%; background: #3182ce; cursor: pointer; box-shadow: 0 2px 6px rgba(49,130,206,0.4); }
+
+        .quick-submit { transition: all 0.2s ease; }
+        .quick-submit:active { transform: scale(0.98); }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
-    <!-- Navigation -->
     <nav class="glass fixed top-0 w-full z-50 border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
@@ -79,33 +85,48 @@
                     </div>
                     <div>
                         <h1 class="text-xl font-bold text-bc-primary">KontenAdapt</h1>
-                        <p class="text-xs text-gray-500">Mesin Kurasi Konten Bea Cukai</p>
+                        <p class="text-xs text-gray-500 hidden sm:block">Mesin Kurasi Konten Bea Cukai</p>
                     </div>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <div class="hidden md:flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
-                        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-active px-4 py-2 rounded-md text-sm transition-all">Dashboard</button>
-                        <button onclick="switchTab('input')" id="tab-input" class="tab-inactive px-4 py-2 rounded-md text-sm transition-all">Kirim Ide</button>
-                        <button onclick="switchTab('curation')" id="tab-curation" class="tab-inactive px-4 py-2 rounded-md text-sm transition-all">Kurasi AI</button>
-                        <button onclick="switchTab('pipeline')" id="tab-pipeline" class="tab-inactive px-4 py-2 rounded-md text-sm transition-all">Pipeline Talent</button>
-                        <button onclick="switchTab('analytics')" id="tab-analytics" class="tab-inactive px-4 py-2 rounded-md text-sm transition-all">Analytics</button>
-                        <button onclick="switchTab('talent')" id="tab-talent" class="tab-inactive px-4 py-2 rounded-md text-sm transition-all">Talent Pool</button>
-                        <button onclick="switchTab('settings')" id="tab-settings" class="tab-inactive px-4 py-2 rounded-md text-sm transition-all">Settings</button>
+                <div class="hidden md:flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+                    <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-active px-4 py-2 rounded-md text-sm transition-all">Dashboard</button>
+                    <button onclick="switchTab('input')" id="tab-input" class="tab-inactive px-4 py-2 rounded-md text-sm transition-all">Kirim Ide</button>
+                    <button onclick="switchTab('curation')" id="tab-curation" class="tab-inactive px-4 py-2 rounded-md text-sm transition-all">Kurasi</button>
+                    <button onclick="switchTab('pipeline')" id="tab-pipeline" class="tab-inactive px-4 py-2 rounded-md text-sm transition-all">Pipeline</button>
+                    <button onclick="switchTab('analytics')" id="tab-analytics" class="tab-inactive px-4 py-2 rounded-md text-sm transition-all">Analytics</button>
+                    <button onclick="switchTab('talent')" id="tab-talent" class="tab-inactive px-4 py-2 rounded-md text-sm transition-all">Talent</button>
+                    <button onclick="switchTab('settings')" id="tab-settings" class="tab-inactive px-4 py-2 rounded-md text-sm transition-all">Settings</button>
+                </div>
+                <div class="flex items-center space-x-2 md:hidden">
+                    <div id="connectionStatus" class="flex items-center px-2 py-1 rounded-full bg-gray-100 text-xs font-medium text-gray-600">
+                        <span class="connection-dot checking"></span>
                     </div>
-                    <div class="flex items-center space-x-2">
-                        <div id="connectionStatus" class="flex items-center px-3 py-1.5 rounded-full bg-gray-100 text-xs font-medium text-gray-600">
-                            <span class="connection-dot checking"></span>
-                            <span id="connectionText">Checking...</span>
-                        </div>
-                        <div class="w-8 h-8 bg-bc-accent rounded-full flex items-center justify-center text-white text-sm font-bold">AH</div>
-                        <span class="text-sm font-medium text-gray-700 hidden sm:block">Koordinator</span>
+                    <button onclick="toggleMobileMenu()" class="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700">
+                        <i class="fas fa-bars text-lg" id="menuIcon"></i>
+                    </button>
+                </div>
+                <div class="hidden md:flex items-center space-x-2">
+                    <div id="connectionStatusDesktop" class="flex items-center px-3 py-1.5 rounded-full bg-gray-100 text-xs font-medium text-gray-600">
+                        <span class="connection-dot checking"></span>
+                        <span id="connectionText">Checking...</span>
                     </div>
+                    <div class="w-8 h-8 bg-bc-accent rounded-full flex items-center justify-center text-white text-sm font-bold">AH</div>
+                    <span class="text-sm font-medium text-gray-700">Koordinator</span>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
+    <div id="mobileMenu" class="mobile-menu">
+        <button onclick="switchTab('dashboard'); toggleMobileMenu()" id="mob-tab-dashboard" class="mobile-menu-item active"><i class="fas fa-home w-6"></i> Dashboard</button>
+        <button onclick="switchTab('input'); toggleMobileMenu()" id="mob-tab-input" class="mobile-menu-item"><i class="fas fa-plus w-6"></i> Kirim Ide</button>
+        <button onclick="switchTab('curation'); toggleMobileMenu()" id="mob-tab-curation" class="mobile-menu-item"><i class="fas fa-pen-to-square w-6"></i> Kurasi</button>
+        <button onclick="switchTab('pipeline'); toggleMobileMenu()" id="mob-tab-pipeline" class="mobile-menu-item"><i class="fas fa-tasks w-6"></i> Pipeline</button>
+        <button onclick="switchTab('analytics'); toggleMobileMenu()" id="mob-tab-analytics" class="mobile-menu-item"><i class="fas fa-chart-line w-6"></i> Analytics</button>
+        <button onclick="switchTab('talent'); toggleMobileMenu()" id="mob-tab-talent" class="mobile-menu-item"><i class="fas fa-users w-6"></i> Talent</button>
+        <button onclick="switchTab('settings'); toggleMobileMenu()" id="mob-tab-settings" class="mobile-menu-item"><i class="fas fa-cog w-6"></i> Settings</button>
+    </div>
+
     <main class="pt-20 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
 
         <!-- TAB: DASHBOARD -->
@@ -118,36 +139,36 @@
                 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
                     <div>
                         <h3 class="font-bold text-gray-900">Ubah ide viral menjadi draft konten Bea Cukai yang siap dikurasi dan diproduksi.</h3>
-                        <p class="text-sm text-gray-500 mt-1">Kirim ide, proses dengan AI, edit hasilnya, lalu teruskan ke talent.</p>
+                        <p class="text-sm text-gray-500 mt-1">Kirim ide, proses manual, edit hasilnya, lalu teruskan ke talent.</p>
                     </div>
                     <div class="flex gap-3">
                         <button onclick="switchTab('input')" class="bg-bc-primary hover:bg-bc-secondary text-white font-semibold px-4 py-3 rounded-xl text-sm"><i class="fas fa-plus mr-2"></i>Kirim Ide Baru</button>
                         <button onclick="switchTab('curation')" class="bg-bc-light hover:bg-blue-100 text-bc-primary font-semibold px-4 py-3 rounded-xl text-sm"><i class="fas fa-pen-to-square mr-2"></i>Lihat Antrian Kurasi</button>
                     </div>
                 </div>
-                <div class="mt-5 grid grid-cols-1 md:grid-cols-4 gap-3">
-                    <div class="workflow-step bg-blue-50 rounded-lg p-3"><span class="w-8 h-8 bg-bc-primary text-white rounded-full flex items-center justify-center text-sm font-bold">1</span><span class="text-sm font-semibold text-bc-primary">Kirim Ide</span></div>
-                    <div class="workflow-step bg-purple-50 rounded-lg p-3"><span class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold">2</span><span class="text-sm font-semibold text-purple-700">Diproses AI</span></div>
-                    <div class="workflow-step bg-yellow-50 rounded-lg p-3"><span class="w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center text-sm font-bold">3</span><span class="text-sm font-semibold text-yellow-700">Diedit Kurator</span></div>
-                    <div class="workflow-step bg-green-50 rounded-lg p-3"><span class="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">4</span><span class="text-sm font-semibold text-green-700">Dikerjakan Talent</span></div>
+                <div class="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div class="workflow-step bg-blue-50 rounded-lg p-3"><span class="w-8 h-8 bg-bc-primary text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">1</span><span class="text-sm font-semibold text-bc-primary">Kirim Ide</span></div>
+                    <div class="workflow-step bg-purple-50 rounded-lg p-3"><span class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</span><span class="text-sm font-semibold text-purple-700">Kurasi Manual</span></div>
+                    <div class="workflow-step bg-yellow-50 rounded-lg p-3"><span class="w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">3</span><span class="text-sm font-semibold text-yellow-700">Diedit Kurator</span></div>
+                    <div class="workflow-step bg-green-50 rounded-lg p-3"><span class="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">4</span><span class="text-sm font-semibold text-green-700">Dikerjakan Talent</span></div>
                 </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                    <p class="text-sm text-gray-500">Ide Masuk</p>
-                    <p id="dashActive" class="text-3xl font-bold text-bc-primary mt-2">0</p>
+                    <p class="text-xs text-gray-500">Ide Masuk</p>
+                    <p id="dashActive" class="text-2xl md:text-3xl font-bold text-bc-primary mt-2">0</p>
                 </div>
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                    <p class="text-sm text-gray-500">Perlu Kurasi</p>
-                    <p id="dashReview" class="text-3xl font-bold text-yellow-600 mt-2">0</p>
+                    <p class="text-xs text-gray-500">Perlu Kurasi</p>
+                    <p id="dashReview" class="text-2xl md:text-3xl font-bold text-yellow-600 mt-2">0</p>
                 </div>
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                    <p class="text-sm text-gray-500">Dalam Produksi</p>
-                    <p id="dashProduction" class="text-3xl font-bold text-blue-600 mt-2">0</p>
+                    <p class="text-xs text-gray-500">Dalam Produksi</p>
+                    <p id="dashProduction" class="text-2xl md:text-3xl font-bold text-blue-600 mt-2">0</p>
                 </div>
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                     <p class="text-xs text-gray-500">Total Views</p>
-                    <p id="dashViews" class="text-3xl font-bold text-green-600 mt-2">0</p>
+                    <p id="dashViews" class="text-2xl md:text-3xl font-bold text-green-600 mt-2">0</p>
                 </div>
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -165,7 +186,6 @@
         <!-- TAB: INPUT IDE -->
         <div id="view-input" class="hidden animate-fade-in">
             <div class="max-w-3xl mx-auto">
-                <!-- Input Form -->
                 <div class="space-y-6">
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                         <div class="flex items-center space-x-3 mb-6">
@@ -174,14 +194,14 @@
                             </div>
                             <div>
                                 <h2 class="text-lg font-bold text-gray-900">Kirim Ide Konten</h2>
-                                <p class="text-sm text-gray-500">Masukkan link, caption awal, dan deskripsi singkat. AI akan membuat draft awal untuk dikurasi.</p>
+                                <p class="text-sm text-gray-500">Masukkan link, caption awal, dan deskripsi singkat. Langsung ke antrian kurasi.</p>
                             </div>
                         </div>
 
                         <form id="ideaForm" class="space-y-5">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Platform Sumber</label>
-                                <div class="grid grid-cols-4 gap-2">
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                     <button type="button" onclick="selectPlatform('Instagram')" class="platform-btn p-3 rounded-xl border-2 border-gray-200 hover:border-bc-accent transition-all text-center" data-platform="Instagram">
                                         <i class="fab fa-instagram text-pink-600 text-xl mb-1"></i>
                                         <p class="text-xs font-medium">Instagram</p>
@@ -240,89 +260,17 @@
                                 <div id="filePreview" class="mt-2 hidden"></div>
                             </div>
 
-                            <button type="submit" class="w-full bg-bc-primary hover:bg-bc-secondary text-white font-semibold py-4 rounded-xl transition-all flex items-center justify-center space-x-2">
+                            <button type="submit" class="w-full bg-bc-primary hover:bg-bc-secondary text-white font-semibold py-4 rounded-xl transition-all quick-submit flex items-center justify-center space-x-2">
                                 <i class="fas fa-paper-plane"></i>
                                 <span>Kirim Ide</span>
                             </button>
                         </form>
                     </div>
                 </div>
-
-                <!-- Results Panel -->
-                <div id="resultsPanel" class="space-y-6 hidden">
-                    <!-- Loading State -->
-                    <div id="loadingState" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center hidden">
-                        <div class="loading-spinner mx-auto mb-4"></div>
-                        <p class="text-gray-600 font-medium">AI sedang menganalisis konten...</p>
-                        <p class="text-sm text-gray-400 mt-1">Breakdown -> Risk Filter -> Transform -> Talent Match</p>
-                    </div>
-
-                    <!-- AI Breakdown Card -->
-                    <div id="breakdownCard" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hidden">
-                        <div class="flex items-center space-x-3 mb-4">
-                            <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-brain text-purple-600"></i>
-                            </div>
-                            <h3 class="font-bold text-gray-900">AI Breakdown Analysis</h3>
-                        </div>
-                        <div id="breakdownContent" class="space-y-3"></div>
-                    </div>
-
-                    <!-- Risk Filter Card -->
-                    <div id="riskCard" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hidden">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-shield-alt text-red-600"></i>
-                                </div>
-                                <h3 class="font-bold text-gray-900">Risk Filter Pemerintah</h3>
-                            </div>
-                            <span id="riskGrade" class="px-3 py-1 rounded-full text-sm font-bold"></span>
-                        </div>
-                        <div id="riskContent" class="space-y-3"></div>
-                    </div>
-
-                    <!-- Brief Card -->
-                    <div id="briefCard" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hidden">
-                        <div class="flex items-center space-x-3 mb-4">
-                            <div class="w-8 h-8 bg-bc-light rounded-lg flex items-center justify-center">
-                                <i class="fas fa-file-alt text-bc-accent"></i>
-                            </div>
-                            <h3 class="font-bold text-gray-900">Brief Konten Generated</h3>
-                        </div>
-                        <div id="briefContent" class="space-y-4"></div>
-                    </div>
-
-                    <!-- Talent Matcher Card -->
-                    <div id="talentCard" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hidden">
-                        <div class="flex items-center space-x-3 mb-4">
-                            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-users text-green-600"></i>
-                            </div>
-                            <h3 class="font-bold text-gray-900">Talent Matcher</h3>
-                        </div>
-                        <div id="talentContent" class="space-y-4"></div>
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div id="actionButtons" class="flex space-x-3 hidden">
-                        <button onclick="approveBrief()" class="flex-1 bg-bc-success hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center space-x-2">
-                            <i class="fas fa-check"></i>
-                            <span>Setujui dan Kirim ke Talent</span>
-                        </button>
-                        <button onclick="showRevisionModal()" class="flex-1 bg-bc-warning hover:bg-yellow-600 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center space-x-2">
-                            <i class="fas fa-edit"></i>
-                            <span>Revisi</span>
-                        </button>
-                        <button onclick="rejectBrief()" class="px-4 bg-bc-danger hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition-all">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
             </div>
         </div>
 
-        <!-- TAB: KURASI AI -->
+        <!-- TAB: KURASI -->
         <div id="view-curation" class="hidden animate-fade-in">
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
                 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -331,8 +279,8 @@
                             <i class="fas fa-pen-to-square text-yellow-700 text-lg"></i>
                         </div>
                         <div>
-                            <h2 class="text-lg font-bold text-gray-900">Kurasi AI</h2>
-                            <p class="text-sm text-gray-500">Edit caption, hook, scene, CTA, risiko, dan brief talent sebelum dikirim ke produksi.</p>
+                            <h2 class="text-lg font-bold text-gray-900">Kurasi Konten</h2>
+                            <p class="text-sm text-gray-500">Edit caption, scene, dan brief talent sebelum dikirim ke produksi.</p>
                         </div>
                     </div>
                     <button onclick="loadCurationQueue()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-4 py-3 rounded-xl text-sm"><i class="fas fa-rotate mr-2"></i>Muat Ulang</button>
@@ -353,11 +301,11 @@
                 <section class="lg:col-span-8 space-y-6">
                     <div id="curationEmpty" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-10 text-center">
                         <i class="fas fa-clipboard-check text-4xl text-gray-300 mb-3"></i>
-                        <p class="font-semibold text-gray-700">Pilih draft AI dari antrian kurasi.</p>
+                        <p class="font-semibold text-gray-700">Pilih draft dari antrian kurasi.</p>
                         <p class="text-sm text-gray-400 mt-1">Draft baru dari halaman Kirim Ide juga akan langsung terbuka di sini.</p>
                     </div>
 
-                    <div id="curationWorkspace" class="hidden grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    <div id="curationWorkspace" class="hidden space-y-6">
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                             <h3 class="font-bold text-gray-900 mb-4">Input Awal</h3>
                             <div id="curationSource" class="space-y-3"></div>
@@ -365,65 +313,53 @@
 
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                             <div class="flex items-center justify-between mb-4">
-                                <h3 class="font-bold text-gray-900">Draft AI yang Bisa Diedit</h3>
+                                <h3 class="font-bold text-gray-900">Draft yang Bisa Diedit</h3>
                                 <span id="curationStatusBadge" class="status-badge status-review">Perlu Kurasi</span>
                             </div>
                             <form id="curationForm" class="space-y-4">
-                                <div>
-                                    <label class="editor-label">Caption Bea Cukai</label>
-                                    <textarea id="editCaption" rows="4" class="editor-field resize-none"></textarea>
+                                <!-- Realisasi Ide: Caption + Hook -->
+                                <div class="bg-bc-light rounded-xl p-4 border border-bc-accent/20">
+                                    <p class="text-xs text-bc-accent font-semibold uppercase tracking-wide mb-3"><i class="fas fa-lightbulb mr-1"></i>Realisasi Ide</p>
+                                    <div>
+                                        <label class="editor-label">Caption Bea Cukai</label>
+                                        <textarea id="editCaption" rows="4" class="editor-field resize-none" placeholder="Tulis caption adaptasi untuk konten Bea Cukai..."></textarea>
+                                    </div>
+                                    <div class="mt-3">
+                                        <label class="editor-label">Hook Konten</label>
+                                        <textarea id="editHook" rows="2" class="editor-field resize-none" placeholder="Tulis hook menarik untuk awal konten..."></textarea>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="editor-label">Hook Konten</label>
-                                    <textarea id="editHook" rows="2" class="editor-field resize-none"></textarea>
-                                </div>
-                                <div>
-                                    <label class="editor-label">Scene Breakdown</label>
+
+                                <!-- Scene Breakdown -->
+                                <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                                    <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-3"><i class="fas fa-film mr-1"></i>Scene Breakdown</p>
                                     <div id="editScenes" class="space-y-3"></div>
                                 </div>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+                                <!-- Brief Talent -->
+                                <div class="bg-green-50 rounded-xl p-4 border border-green-200">
+                                    <p class="text-xs text-green-700 font-semibold uppercase tracking-wide mb-3"><i class="fas fa-briefcase mr-1"></i>Brief untuk Talent</p>
                                     <div>
-                                        <label class="editor-label">CTA</label>
-                                        <input id="editCta" class="editor-field">
+                                        <label class="editor-label">Brief Produksi</label>
+                                        <textarea id="editTalentBrief" rows="4" class="editor-field resize-none" placeholder="Jelaskan arahan produksi untuk talent: lokasi, properti, aksi, durasi, dll."></textarea>
                                     </div>
-                                    <div>
-                                        <label class="editor-label">Audio</label>
-                                        <input id="editAudio" class="editor-field">
+                                    <div class="mt-3">
+                                        <label class="editor-label">CTA (Call to Action)</label>
+                                        <input id="editCta" class="editor-field" placeholder="Contoh: DM kami untuk info lebih lanjut!">
                                     </div>
-                                </div>
-                                <div>
-                                    <label class="editor-label">Hashtag</label>
-                                    <input id="editHashtags" class="editor-field">
-                                </div>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="editor-label">Tone</label>
-                                        <input id="editTone" class="editor-field">
-                                    </div>
-                                    <div>
-                                        <label class="editor-label">Target Audience</label>
-                                        <input id="editAudience" class="editor-field">
+                                    <div class="mt-3">
+                                        <label class="editor-label">Rekomendasi Audio</label>
+                                        <input id="editAudio" class="editor-field" placeholder="Contoh: Audio trending #xyz">
                                     </div>
                                 </div>
-                                <div>
-                                    <label class="editor-label">Key Message</label>
-                                    <textarea id="editKeyMessage" rows="2" class="editor-field resize-none"></textarea>
-                                </div>
-                                <div>
-                                    <label class="editor-label">Catatan Risiko</label>
-                                    <textarea id="editRiskNotes" rows="2" class="editor-field resize-none"></textarea>
-                                </div>
-                                <div>
-                                    <label class="editor-label">Brief untuk Talent</label>
-                                    <textarea id="editTalentBrief" rows="3" class="editor-field resize-none"></textarea>
-                                </div>
+
                                 <div>
                                     <label class="editor-label">Catatan Kurator</label>
                                     <textarea id="editCuratorNotes" rows="3" class="editor-field resize-none" placeholder="Arahan final, batasan produksi, atau catatan khusus untuk talent."></textarea>
                                 </div>
-                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                                     <button type="button" onclick="saveCuratedDraft()" class="bg-bc-primary hover:bg-bc-secondary text-white font-semibold py-3 rounded-xl"><i class="fas fa-save mr-2"></i>Simpan Draft</button>
-                                    <button type="button" onclick="regenerateCurrentBrief()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl"><i class="fas fa-wand-magic-sparkles mr-2"></i>Generate Ulang</button>
                                     <button type="button" onclick="approveBrief()" class="bg-bc-success hover:bg-green-700 text-white font-semibold py-3 rounded-xl"><i class="fas fa-paper-plane mr-2"></i>Kirim ke Talent</button>
                                 </div>
                             </form>
@@ -436,7 +372,7 @@
         <!-- TAB: PIPELINE -->
         <div id="view-pipeline" class="hidden animate-fade-in">
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div class="flex items-center space-x-3">
                         <div class="w-10 h-10 bg-bc-light rounded-lg flex items-center justify-center">
                             <i class="fas fa-tasks text-bc-accent text-lg"></i>
@@ -446,11 +382,11 @@
                             <p class="text-sm text-gray-500">Tracking ide masuk sampai produksi selesai</p>
                         </div>
                     </div>
-                    <div class="flex space-x-2">
-                        <span class="status-badge status-draft">Ide Masuk: <span id="countDraft">0</span></span>
-                        <span class="status-badge status-review">Perlu Kurasi: <span id="countReview">0</span></span>
-                        <span class="status-badge status-approved">Siap Talent: <span id="countApproved">0</span></span>
-                        <span class="status-badge status-production">Dalam Produksi: <span id="countProduction">0</span></span>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="status-badge status-draft">Ide: <span id="countDraft">0</span></span>
+                        <span class="status-badge status-review">Kurasi: <span id="countReview">0</span></span>
+                        <span class="status-badge status-approved">Siap: <span id="countApproved">0</span></span>
+                        <span class="status-badge status-production">Produksi: <span id="countProduction">0</span></span>
                         <span class="status-badge status-published">Selesai: <span id="countPublished">0</span></span>
                     </div>
                 </div>
@@ -467,33 +403,33 @@
                     </div>
                     <div>
                         <h2 class="text-lg font-bold text-gray-900">Analytics Dashboard</h2>
-                        <p class="text-sm text-gray-500">Performa konten & insight</p>
+                        <p class="text-sm text-gray-500">Performa konten & insight berdasarkan data produksi</p>
                     </div>
                 </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                     <div class="flex items-center justify-between">
-                        <div><p class="text-sm text-gray-500">Total Published</p><p class="text-2xl font-bold text-bc-primary" id="statPublished">0</p></div>
-                        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center"><i class="fas fa-upload text-green-600 text-xl"></i></div>
+                        <div><p class="text-xs text-gray-500">Total Published</p><p class="text-xl md:text-2xl font-bold text-bc-primary" id="statPublished">0</p></div>
+                        <div class="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-xl flex items-center justify-center"><i class="fas fa-upload text-green-600 text-lg md:text-xl"></i></div>
                     </div>
                 </div>
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                     <div class="flex items-center justify-between">
-                        <div><p class="text-sm text-gray-500">Total Views</p><p class="text-2xl font-bold text-bc-primary" id="statViews">0</p></div>
-                        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center"><i class="fas fa-eye text-blue-600 text-xl"></i></div>
+                        <div><p class="text-xs text-gray-500">Total Views</p><p class="text-xl md:text-2xl font-bold text-bc-primary" id="statViews">0</p></div>
+                        <div class="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-xl flex items-center justify-center"><i class="fas fa-eye text-blue-600 text-lg md:text-xl"></i></div>
                     </div>
                 </div>
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                     <div class="flex items-center justify-between">
-                        <div><p class="text-sm text-gray-500">Avg Views</p><p class="text-2xl font-bold text-bc-primary" id="statAvgViews">0</p></div>
-                        <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center"><i class="fas fa-chart-bar text-purple-600 text-xl"></i></div>
+                        <div><p class="text-xs text-gray-500">Avg Views</p><p class="text-xl md:text-2xl font-bold text-bc-primary" id="statAvgViews">0</p></div>
+                        <div class="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-xl flex items-center justify-center"><i class="fas fa-chart-bar text-purple-600 text-lg md:text-xl"></i></div>
                     </div>
                 </div>
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                     <div class="flex items-center justify-between">
-                        <div><p class="text-sm text-gray-500">Total Likes</p><p class="text-2xl font-bold text-bc-primary" id="statLikes">0</p></div>
-                        <div class="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center"><i class="fas fa-heart text-pink-600 text-xl"></i></div>
+                        <div><p class="text-xs text-gray-500">Total Likes</p><p class="text-xl md:text-2xl font-bold text-bc-primary" id="statLikes">0</p></div>
+                        <div class="w-10 h-10 md:w-12 md:h-12 bg-pink-100 rounded-xl flex items-center justify-center"><i class="fas fa-heart text-pink-600 text-lg md:text-xl"></i></div>
                     </div>
                 </div>
             </div>
@@ -505,6 +441,23 @@
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                     <h3 class="font-bold text-gray-900 mb-4">Performa per Kategori</h3>
                     <div id="categoryChart" class="space-y-3"></div>
+                </div>
+            </div>
+            <div class="mt-6 bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <h3 class="font-bold text-gray-900 mb-4">Cara Menggunakan Analytics</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                    <div class="bg-gray-50 rounded-xl p-4">
+                        <p class="font-semibold text-gray-800 mb-1"><i class="fas fa-database mr-1 text-bc-accent"></i>Input Data</p>
+                        <p>Buka detail konten di Pipeline, masukkan views, likes, shares, comments, dan retention rate.</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-4">
+                        <p class="font-semibold text-gray-800 mb-1"><i class="fas fa-sync mr-1 text-bc-accent"></i>Update Berkala</p>
+                        <p>Update metric setiap konten dipublish. Data akan otomatis terhitung di dashboard ini.</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-4">
+                        <p class="font-semibold text-gray-800 mb-1"><i class="fas fa-lightbulb mr-1 text-bc-accent"></i>Insight</p>
+                        <p>Lihat talent dan kategori mana yang paling performa tinggi untuk strategi konten berikutnya.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -540,7 +493,6 @@
                     </div>
                 </div>
 
-                <!-- Connection Status Card -->
                 <div id="backendStatusCard" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6 hidden">
                     <div class="flex items-start space-x-4">
                         <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
@@ -560,43 +512,7 @@
                             <i class="fas fa-link mr-1 text-bc-accent"></i>Google Apps Script Web App URL <span class="text-red-500">*</span>
                         </label>
                         <input type="text" id="gasUrl" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bc-accent focus:ring-2 focus:ring-bc-light outline-none text-sm" placeholder="https://script.google.com/macros/s/.../exec">
-                        <p class="text-xs text-gray-400 mt-1">URL dari deployment GAS (deploy as Web App). Satu-satunya konfigurasi yang diperlukan di frontend.</p>
-                    </div>
-
-                    <div class="border-t border-gray-100 pt-4">
-                        <p class="text-sm font-semibold text-gray-700 mb-3"><i class="fas fa-lock mr-1 text-gray-400"></i>Backend-Managed Settings</p>
-                        <p class="text-xs text-gray-400 mb-4">Pengaturan berikut dikelola di backend (Google Apps Script). Tidak perlu diubah di sini kecuali untuk override sementara.</p>
-
-                        <div class="space-y-4 opacity-75">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">OpenAI API Key</label>
-                                <input type="password" id="apiKey" class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm" placeholder="Tersimpan di backend" disabled>
-                                <p class="text-xs text-gray-400 mt-1">API Key diatur di sheet SETTINGS backend atau hardcode di CONFIG.</p>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Google Sheet ID</label>
-                                <input type="text" id="sheetId" class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm" placeholder="Tersimpan di backend" disabled>
-                                <p class="text-xs text-gray-400 mt-1">Sheet ID diatur di CONFIG backend (KONTENADAPT_Backend.gs).</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="border-t border-gray-100 pt-4">
-                        <p class="text-sm font-semibold text-gray-700 mb-3">Preferensi Sistem</p>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Risk Threshold</label>
-                                <input type="number" id="riskThreshold" value="7" min="1" max="10" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bc-accent focus:ring-2 focus:ring-bc-light outline-none text-sm">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Auto-Approve Score</label>
-                                <input type="number" id="autoApproveScore" value="9" min="1" max="10" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bc-accent focus:ring-2 focus:ring-bc-light outline-none text-sm">
-                            </div>
-                        </div>
-                        <div class="mt-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Minimum Talent Match Score</label>
-                            <input type="number" id="talentMinScore" value="70" min="0" max="100" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bc-accent focus:ring-2 focus:ring-bc-light outline-none text-sm">
-                        </div>
+                        <p class="text-xs text-gray-400 mt-1">URL dari deployment GAS (deploy as Web App).</p>
                     </div>
 
                     <div class="flex space-x-3">
@@ -612,16 +528,20 @@
         </div>
     </main>
 
-    <!-- Modal: Approval -->
+    <!-- Modal: Approval dengan Persentage -->
     <div id="approvalModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-fade-in">
             <h3 class="text-xl font-bold text-gray-900 mb-4">Kirim Brief ke Talent</h3>
             <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Talent</label>
-                    <select id="assignTalent" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bc-accent outline-none text-sm">
-                        <option value="">Pilih Talent...</option>
-                    </select>
+                <div class="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                    <label class="block text-sm font-medium text-gray-700 mb-2"><i class="fas fa-percentage mr-1 text-bc-accent"></i>Persentase Talent yang Dikerjakan</label>
+                    <input type="range" id="talentPercentage" min="10" max="100" step="10" value="100" class="percentage-slider" oninput="updatePercentageLabel(this.value)">
+                    <div class="flex justify-between mt-2">
+                        <span class="text-xs text-gray-500">10%</span>
+                        <span class="text-lg font-bold text-bc-primary" id="percentageLabel">100%</span>
+                        <span class="text-xs text-gray-500">100%</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Brief akan dikirim ke <span id="talentCountLabel" class="font-semibold">semua</span> talent yang tersedia sesuai persentase.</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Deadline Produksi</label>
@@ -701,8 +621,9 @@
             <span id="toastMessage">Notification</span>
         </div>
     </div>
+
     <script>
-        // CONFIGURATION - Frontend hanya menyimpan GAS_URL
+        // CONFIGURATION
         let CONFIG = {
             GAS_URL: localStorage.getItem('gasUrl') || 'https://script.google.com/macros/s/AKfycbyqXq2TM1_wo0L1IlyZtIz71ICNhs4YVcOMkK_pbwAK4VmUJ6Pb-BrXxn-C2yMHwu00/exec'
         };
@@ -715,6 +636,7 @@
         let currentCurationRisk = null;
         let uploadedReferenceName = '';
         let backendInfo = null;
+        let mobileMenuOpen = false;
 
         // UI FUNCTIONS
         function switchTab(tab) {
@@ -725,8 +647,17 @@
                 el.classList.remove('tab-active');
                 el.classList.add('tab-inactive');
             });
-            document.getElementById('tab-' + tab).classList.remove('tab-inactive');
-            document.getElementById('tab-' + tab).classList.add('tab-active');
+            var tabEl = document.getElementById('tab-' + tab);
+            if (tabEl) {
+                tabEl.classList.remove('tab-inactive');
+                tabEl.classList.add('tab-active');
+            }
+
+            document.querySelectorAll('[id^="mob-tab-"]').forEach(el => {
+                el.classList.remove('active');
+            });
+            var mobTabEl = document.getElementById('mob-tab-' + tab);
+            if (mobTabEl) mobTabEl.classList.add('active');
 
             if (tab === 'dashboard') loadDashboard();
             if (tab === 'curation') loadCurationQueue();
@@ -734,6 +665,21 @@
             if (tab === 'analytics') loadAnalytics();
             if (tab === 'talent') loadTalentPool();
             if (tab === 'settings') loadSettings();
+        }
+
+        function toggleMobileMenu() {
+            mobileMenuOpen = !mobileMenuOpen;
+            var menu = document.getElementById('mobileMenu');
+            var icon = document.getElementById('menuIcon');
+            if (mobileMenuOpen) {
+                menu.classList.add('open');
+                icon.classList.remove('fa-bars');
+                icon.classList.add('fa-times');
+            } else {
+                menu.classList.remove('open');
+                icon.classList.remove('fa-times');
+                icon.classList.add('fa-bars');
+            }
         }
 
         function selectPlatform(platform) {
@@ -800,6 +746,12 @@
             return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
         }
 
+        function updatePercentageLabel(val) {
+            document.getElementById('percentageLabel').textContent = val + '%';
+            var countText = val === '100' ? 'semua' : val + '% dari';
+            document.getElementById('talentCountLabel').textContent = countText;
+        }
+
         // API FUNCTIONS
         async function apiCall(action, method, data) {
             method = method || 'GET';
@@ -861,10 +813,12 @@
         }
 
         function updateConnectionStatus(status, text) {
-            var dot = document.querySelector('#connectionStatus .connection-dot');
+            var dots = document.querySelectorAll('.connection-dot');
+            dots.forEach(function(dot) {
+                dot.className = 'connection-dot ' + status;
+            });
             var txt = document.getElementById('connectionText');
-            dot.className = 'connection-dot ' + status;
-            txt.textContent = text;
+            if (txt) txt.textContent = text;
         }
 
         function renderBackendStatus(info) {
@@ -883,13 +837,10 @@
             if (info.sheetIdConfigured) {
                 html += '<span class="px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium"><i class="fas fa-database mr-1"></i>Sheet ID OK</span>';
             }
-            if (info.model) {
-                html += '<span class="px-2 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-medium"><i class="fas fa-robot mr-1"></i>' + info.model + '</span>';
-            }
             badges.innerHTML = html;
         }
 
-        // FORM SUBMISSION
+        // FORM SUBMISSION - CEPAT, TANPA AI
         document.getElementById('ideaForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
@@ -904,8 +855,9 @@
             if (!caption) { showToast('Isi caption/ide konten!', 'error'); return; }
             if (!category) { showToast('Pilih kategori konten!', 'error'); return; }
 
-            showToast('Ide dikirim. AI sedang membuat draft awal...', 'info');
+            showToast('Mengirim ide...', 'info');
 
+            // Langsung submit tanpa AI processing
             var submitResult = await apiCall('submitIdea', 'POST', {
                 submitter: 'Koordinator',
                 sourceLink: link,
@@ -916,6 +868,7 @@
             });
 
             if (!submitResult || !submitResult.success) {
+                showToast('Gagal mengirim ide', 'error');
                 return;
             }
 
@@ -929,183 +882,29 @@
                 category: category
             };
 
-            var briefResult = await apiCall('generateBrief', 'POST', {
+            // Langsung buka halaman kurasi dengan form kosong siap diisi manual
+            currentBrief = {
                 contentId: currentContentId,
-                sourceCaption: sourceText,
-                sourcePlatform: platform,
-                selectedCategory: category
-            });
+                brief: {
+                    transformed_caption: '',
+                    hook_options: [],
+                    scene_breakdown: [],
+                    cta: '',
+                    audio_recommendation: '',
+                    caption_hashtags: '',
+                    tone: '',
+                    target_audience: '',
+                    key_message: ''
+                },
+                talentMatch: { primary_talent: '', primary_score: 0, primary_reason: '', secondary_talent: '' },
+                risk: { overall_score: 0, risk_notes: [] }
+            };
 
-            if (!briefResult || !briefResult.success) {
-                showToast('Gagal generate brief', 'error');
-                return;
-            }
-
-            currentBrief = briefResult;
-            currentTalentMatch = briefResult.talentMatch;
-            currentCurationRisk = briefResult.risk;
-
-            renderCurationWorkspace(currentCurationSource, briefResult);
+            renderCurationWorkspace(currentCurationSource, currentBrief);
             switchTab('curation');
             loadDashboard();
-
-            showToast('Ide berhasil dikirim. Draft AI siap dikurasi.');
+            showToast('Ide berhasil dikirim! Silakan isi draft manual di halaman Kurasi.');
         });
-
-        // RENDER FUNCTIONS
-        function renderBreakdown(breakdown) {
-            var card = document.getElementById('breakdownCard');
-            var content = document.getElementById('breakdownContent');
-
-            content.innerHTML = '<div class="grid grid-cols-2 gap-3">' +
-                '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500">Format</p><p class="font-semibold text-gray-900">' + (breakdown.format_detected || 'Unknown') + '</p></div>' +
-                '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500">Durasi Estimasi</p><p class="font-semibold text-gray-900">' + (breakdown.estimated_duration || '30 detik') + '</p></div>' +
-                '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500">Scene Count</p><p class="font-semibold text-gray-900">' + (breakdown.scene_count || 2) + ' scene</p></div>' +
-                '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500">Emotion</p><p class="font-semibold text-gray-900">' + (breakdown.emotion_profile || 'Neutral') + '</p></div>' +
-                '</div>' +
-                '<div class="bg-purple-50 rounded-lg p-3"><p class="text-xs text-purple-600 font-medium mb-1">Hook Analysis</p><p class="text-sm text-gray-800">' + (breakdown.hook_analysis || 'Tidak terdeteksi') + '</p></div>' +
-                '<div class="bg-blue-50 rounded-lg p-3"><p class="text-xs text-blue-600 font-medium mb-1">Engagement Driver</p><p class="text-sm text-gray-800">' + (breakdown.engagement_driver || 'Unknown') + '</p></div>';
-
-            card.classList.remove('hidden');
-        }
-
-        function renderRisk(risk) {
-            var card = document.getElementById('riskCard');
-            var content = document.getElementById('riskContent');
-            var grade = document.getElementById('riskGrade');
-
-            var gradeColor = risk.overall_grade && risk.overall_grade.startsWith('A') ? 'bg-green-100 text-green-700' :
-                              risk.overall_grade && risk.overall_grade.startsWith('B') ? 'bg-blue-100 text-blue-700' :
-                              risk.overall_grade && risk.overall_grade.startsWith('C') ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-red-100 text-red-700';
-
-            grade.className = 'px-3 py-1 rounded-full text-sm font-bold ' + gradeColor;
-            grade.textContent = risk.overall_grade || 'N/A';
-
-            var risks = [
-                { label: 'Aman Instansi', score: risk.government_safe || 5, color: 'bg-green-500' },
-                { label: 'Copyright', score: risk.copyright_risk || 5, color: 'bg-yellow-500' },
-                { label: 'Multitafsir', score: risk.misinterpretation_risk || 5, color: 'bg-orange-500' },
-                { label: 'Sarkasme', score: risk.sarcasm_risk || 5, color: 'bg-red-500' },
-                { label: 'Konflik Institusi', score: risk.institution_conflict_risk || 5, color: 'bg-blue-500' }
-            ];
-
-            var html = '';
-            for (var i = 0; i < risks.length; i++) {
-                var r = risks[i];
-                var scoreColor = r.score >= 7 ? 'text-green-600' : r.score >= 5 ? 'text-yellow-600' : 'text-red-600';
-                html += '<div><div class="flex justify-between text-sm mb-1"><span class="text-gray-600">' + r.label + '</span><span class="font-semibold ' + scoreColor + '">' + r.score + '/10</span></div><div class="risk-bar"><div class="risk-fill ' + r.color + '" style="width: ' + (r.score * 10) + '%"></div></div></div>';
-            }
-
-            html += '<div class="mt-4 bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500 font-medium mb-1">Rekomendasi</p><p class="text-sm ' + (risk.recommendation === 'Aman' ? 'text-green-700' : 'text-yellow-700') + '">' + escapeHtml(risk.recommendation || 'Perlu review') + '</p></div>';
-
-            if (risk.risk_notes && risk.risk_notes.length > 0) {
-                html += '<div class="bg-yellow-50 rounded-lg p-3"><p class="text-xs text-yellow-600 font-medium mb-1">Catatan</p><ul class="text-sm text-gray-700 space-y-1">';
-                for (var j = 0; j < risk.risk_notes.length; j++) {
-                    html += '<li>- ' + escapeHtml(risk.risk_notes[j]) + '</li>';
-                }
-                html += '</ul></div>';
-            }
-
-            content.innerHTML = html;
-            card.classList.remove('hidden');
-        }
-
-        function renderBrief(brief) {
-            var card = document.getElementById('briefCard');
-            var content = document.getElementById('briefContent');
-
-            var scenes = brief.scene_breakdown || [];
-            var hooks = brief.hook_options || [];
-
-            var html = '<div class="bg-bc-light rounded-lg p-4 border border-bc-accent/20">' +
-                '<p class="text-xs text-bc-accent font-semibold uppercase tracking-wide mb-1">Caption Transformasi</p>' +
-                '<p class="text-gray-900 font-medium">' + (brief.transformed_caption || 'Belum tersedia') + '</p></div>';
-
-            html += '<div><p class="text-sm font-semibold text-gray-700 mb-2">Hook Options (Pilih 1)</p><div class="space-y-2">';
-            for (var i = 0; i < hooks.length; i++) {
-                html += '<div class="hook-option p-3 rounded-lg border border-gray-200" onclick="selectHook(this, \'' + escapeJsArg(hooks[i]) + '\')">' +
-                    '<div class="flex items-start space-x-3"><span class="w-6 h-6 bg-bc-primary text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">' + (i + 1) + '</span>' +
-                    '<p class="text-sm text-gray-800">' + escapeHtml(hooks[i]) + '</p></div></div>';
-            }
-            html += '</div></div>';
-
-            html += '<div><p class="text-sm font-semibold text-gray-700 mb-2">Scene Breakdown</p><div class="space-y-3">';
-            for (var s = 0; s < scenes.length; s++) {
-                var scene = scenes[s];
-                var propsHtml = '';
-                if (scene.props && scene.props.length > 0) {
-                    for (var p = 0; p < scene.props.length; p++) {
-                        propsHtml += '<span class="text-xs bg-white px-2 py-1 rounded border text-gray-600">' + scene.props[p] + '</span>';
-                    }
-                }
-                html += '<div class="scene-card bg-gray-50 rounded-lg p-3">' +
-                    '<div class="flex items-center space-x-2 mb-1"><span class="text-xs font-bold text-bc-accent">Scene ' + (scene.scene_number || s + 1) + '</span>' +
-                    '<span class="text-xs text-gray-400">' + (scene.timestamp || '0-5s') + '</span></div>' +
-                    '<p class="text-sm text-gray-800">' + (scene.description || 'Deskripsi scene') + '</p>' +
-                    '<div class="flex flex-wrap gap-2 mt-2">' +
-                    '<span class="text-xs bg-white px-2 py-1 rounded border text-gray-600"><i class="fas fa-user mr-1"></i>' + (scene.talent_action || 'Action') + '</span>' +
-                    '<span class="text-xs bg-white px-2 py-1 rounded border text-gray-600"><i class="fas fa-map-marker-alt mr-1"></i>' + (scene.location || 'Lokasi') + '</span>' +
-                    propsHtml + '</div></div>';
-            }
-            html += '</div></div>';
-
-            html += '<div class="grid grid-cols-2 gap-3">' +
-                '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500">CTA</p><p class="text-sm font-semibold text-gray-900">' + (brief.cta || 'Belum tersedia') + '</p></div>' +
-                '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500">Audio</p><p class="text-sm font-semibold text-gray-900">' + (brief.audio_recommendation || 'Belum tersedia') + '</p></div></div>';
-
-            html += '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500">Hashtags</p><p class="text-sm text-bc-accent">' + (brief.caption_hashtags || '#BeaCukaiMelayani') + '</p></div>';
-
-            html += '<div class="grid grid-cols-2 gap-3">' +
-                '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500">Tone</p><p class="text-sm font-semibold text-gray-900">' + (brief.tone || 'Educational-friendly') + '</p></div>' +
-                '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500">Target Audience</p><p class="text-sm font-semibold text-gray-900">' + (brief.target_audience || 'Masyarakat umum') + '</p></div></div>';
-
-            html += '<div class="bg-bc-primary/5 rounded-lg p-3 border border-bc-primary/20"><p class="text-xs text-bc-primary font-medium mb-1">Key Message</p><p class="text-sm text-gray-800">' + (brief.key_message || 'Layanan Bea Cukai siap membantu') + '</p></div>';
-
-            content.innerHTML = html;
-            card.classList.remove('hidden');
-        }
-
-        function renderTalentMatch(match) {
-            var card = document.getElementById('talentCard');
-            var content = document.getElementById('talentContent');
-
-            var html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
-
-            // Primary
-            html += '<div class="talent-card primary rounded-xl p-4">' +
-                '<div class="flex items-center justify-between mb-3"><div class="flex items-center space-x-3">' +
-                '<div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white text-lg font-bold">' + getInitials(match.primary_talent) + '</div>' +
-                '<div><p class="font-bold text-gray-900">' + (match.primary_talent || 'Belum tersedia') + '</p>' +
-                '<span class="text-xs bg-green-200 text-green-800 px-2 py-0.5 rounded-full">Primary Match</span></div></div>' +
-                '<div class="text-right"><p class="text-2xl font-bold text-green-600">' + (match.primary_score || 0) + '%</p><p class="text-xs text-gray-500">Match Score</p></div></div>' +
-                '<p class="text-sm text-gray-700 mb-3">' + (match.primary_reason || 'Alasan matching tidak tersedia') + '</p>' +
-                '<div class="bg-white rounded-lg p-2 text-xs text-gray-600"><i class="fas fa-briefcase mr-1"></i> ' + (match.talent_brief || 'Brief untuk talent') + '</div></div>';
-
-            // Secondary
-            html += '<div class="talent-card secondary rounded-xl p-4">' +
-                '<div class="flex items-center justify-between mb-3"><div class="flex items-center space-x-3">' +
-                '<div class="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center text-white text-lg font-bold">' + getInitials(match.secondary_talent) + '</div>' +
-                '<div><p class="font-bold text-gray-900">' + (match.secondary_talent || 'Belum tersedia') + '</p>' +
-                '<span class="text-xs bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full">Secondary Match</span></div></div>' +
-                '<div class="text-right"><p class="text-2xl font-bold text-yellow-600">' + (match.secondary_score || 0) + '%</p><p class="text-xs text-gray-500">Match Score</p></div></div>' +
-                '<p class="text-sm text-gray-700">' + (match.secondary_reason || 'Alasan matching tidak tersedia') + '</p></div></div>';
-
-            html += '<div class="bg-gray-50 rounded-lg p-3"><p class="text-xs text-gray-500 font-medium mb-1"><i class="fas fa-lightbulb mr-1"></i>Rekomendasi Syuting</p><p class="text-sm text-gray-800">' + (match.shooting_recommendation || 'Jadwalkan sesuai availability talent') + '</p></div>';
-
-            html += '<div class="bg-bc-light rounded-lg p-3 border border-bc-accent/20"><p class="text-xs text-bc-accent font-medium mb-1"><i class="fas fa-chart-line mr-1"></i>Analisis Matching</p><p class="text-sm text-gray-800">' + (match.match_analysis || 'Analisis tidak tersedia') + '</p></div>';
-
-            content.innerHTML = html;
-            card.classList.remove('hidden');
-        }
-
-        function selectHook(element, hook) {
-            var options = document.querySelectorAll('.hook-option');
-            for (var i = 0; i < options.length; i++) {
-                options[i].classList.remove('selected');
-            }
-            element.classList.add('selected');
-        }
 
         // CURATION WORKFLOW
         async function loadCurationQueue() {
@@ -1144,30 +943,28 @@
                 category: detail.category,
                 status: detail.status
             };
-            currentTalentMatch = {
-                primary_talent: detail.talentPrimary,
-                primary_score: detail.talentScore,
-                primary_reason: detail.talentReason,
-                secondary_talent: detail.talentSecondary,
-                talent_brief: detail.talentReason
-            };
             currentBrief = {
                 contentId: detail.id,
                 brief: {
-                    transformed_caption: detail.transformedCaption,
+                    transformed_caption: detail.transformedCaption || '',
                     hook_options: detail.transformedHook ? String(detail.transformedHook).split(' || ') : [],
                     scene_breakdown: detail.scenes || [],
-                    cta: detail.cta,
-                    audio_recommendation: detail.audio,
+                    cta: detail.cta || '',
+                    audio_recommendation: detail.audio || '',
                     caption_hashtags: '',
                     tone: '',
                     target_audience: '',
                     key_message: ''
                 },
-                talentMatch: currentTalentMatch,
+                talentMatch: {
+                    primary_talent: detail.talentPrimary || '',
+                    primary_score: detail.talentScore || 0,
+                    primary_reason: detail.talentReason || '',
+                    secondary_talent: detail.talentSecondary || ''
+                },
                 risk: {
-                    overall_score: detail.riskScore,
-                    risk_notes: [detail.riskGovernment ? 'Aman instansi: ' + detail.riskGovernment + '/10' : '', detail.riskCopyright ? 'Copyright: ' + detail.riskCopyright + '/10' : '', detail.riskMisinterpret ? 'Multitafsir: ' + detail.riskMisinterpret + '/10' : '', detail.riskSarcasm ? 'Sarkasme: ' + detail.riskSarcasm + '/10' : ''].filter(Boolean)
+                    overall_score: detail.riskScore || 0,
+                    risk_notes: []
                 }
             };
             currentCurationRisk = currentBrief.risk;
@@ -1176,12 +973,9 @@
 
         function renderCurationWorkspace(source, result) {
             var brief = result.brief || {};
-            var talentMatch = result.talentMatch || {};
-            var risk = result.risk || {};
             var hooks = brief.hook_options || [];
             var scenes = brief.scene_breakdown || [];
             var firstHook = Array.isArray(hooks) ? hooks[0] : hooks;
-            var riskNotes = Array.isArray(risk.risk_notes) ? risk.risk_notes.join('\n') : (risk.risk_notes || '');
 
             document.getElementById('curationEmpty').classList.add('hidden');
             document.getElementById('curationWorkspace').classList.remove('hidden');
@@ -1199,12 +993,7 @@
             document.getElementById('editHook').value = firstHook || '';
             document.getElementById('editCta').value = brief.cta || '';
             document.getElementById('editAudio').value = brief.audio_recommendation || '';
-            document.getElementById('editHashtags').value = brief.caption_hashtags || '';
-            document.getElementById('editTone').value = brief.tone || '';
-            document.getElementById('editAudience').value = brief.target_audience || '';
-            document.getElementById('editKeyMessage').value = brief.key_message || '';
-            document.getElementById('editRiskNotes').value = riskNotes;
-            document.getElementById('editTalentBrief').value = talentMatch.talent_brief || talentMatch.primary_reason || '';
+            document.getElementById('editTalentBrief').value = (result.talentMatch && result.talentMatch.talent_brief) || (result.talentMatch && result.talentMatch.primary_reason) || '';
 
             var sceneHtml = '';
             for (var i = 0; i < 5; i++) {
@@ -1241,10 +1030,6 @@
                 scenes: scenes,
                 cta: document.getElementById('editCta').value,
                 audio: document.getElementById('editAudio').value,
-                riskNotes: document.getElementById('editRiskNotes').value,
-                talentPrimary: currentTalentMatch && currentTalentMatch.primary_talent,
-                talentSecondary: currentTalentMatch && currentTalentMatch.secondary_talent,
-                talentScore: currentTalentMatch && currentTalentMatch.primary_score,
                 talentBrief: document.getElementById('editTalentBrief').value,
                 curatorNotes: document.getElementById('editCuratorNotes').value,
                 status: status || 'Review'
@@ -1266,24 +1051,6 @@
             return false;
         }
 
-        async function regenerateCurrentBrief() {
-            if (!currentContentId || !currentCurationSource) return;
-            var sourceText = currentCurationSource.sourceCaption || '';
-            var result = await apiCall('generateBrief', 'POST', {
-                contentId: currentContentId,
-                sourceCaption: sourceText,
-                sourcePlatform: currentCurationSource.sourcePlatform || 'Manual',
-                selectedCategory: currentCurationSource.category || ''
-            });
-            if (result && result.success) {
-                currentBrief = result;
-                currentTalentMatch = result.talentMatch;
-                currentCurationRisk = result.risk;
-                renderCurationWorkspace(currentCurationSource, result);
-                showToast('Draft AI berhasil digenerate ulang.');
-            }
-        }
-
         function mapStatusLabel(status) {
             var labels = {
                 Draft: 'Ide Masuk',
@@ -1298,44 +1065,29 @@
             return labels[status] || status || '-';
         }
 
-        // APPROVAL WORKFLOW
+        // APPROVAL WORKFLOW - PERSENTASE
         function approveBrief() {
             if (!currentContentId) return;
-
-            var select = document.getElementById('assignTalent');
-            select.innerHTML = '<option value="">Pilih Talent...</option>';
-
-            if (currentTalentMatch) {
-                if (currentTalentMatch.primary_talent) {
-                    select.innerHTML += '<option value="' + currentTalentMatch.primary_talent + '">' + currentTalentMatch.primary_talent + ' (Primary - ' + currentTalentMatch.primary_score + '%)</option>';
-                }
-                if (currentTalentMatch.secondary_talent) {
-                    select.innerHTML += '<option value="' + currentTalentMatch.secondary_talent + '">' + currentTalentMatch.secondary_talent + ' (Secondary - ' + currentTalentMatch.secondary_score + '%)</option>';
-                }
-            }
-
             document.getElementById('approvalModal').classList.remove('hidden');
         }
 
         async function confirmApproval() {
-            var talent = document.getElementById('assignTalent').value;
+            var percentage = document.getElementById('talentPercentage').value;
             var deadline = document.getElementById('deadline').value;
             var notes = document.getElementById('approverNotes').value;
 
-            if (!talent) { showToast('Pilih talent dulu!', 'error'); return; }
             await saveCuratedDraft(true, 'Approved');
 
             var result = await apiCall('approveContent', 'POST', {
                 contentId: currentContentId,
-                assignedTalent: talent,
+                talentPercentage: percentage,
                 deadline: deadline,
                 approverNotes: notes
             });
 
             if (result && result.success) {
-                showToast('Brief final dikirim ke ' + talent);
+                showToast('Brief final dikirim ke ' + percentage + '% talent yang tersedia');
                 closeModal('approvalModal');
-                document.getElementById('actionButtons').classList.add('hidden');
                 loadPipeline();
                 loadCurationQueue();
             }
@@ -1357,14 +1109,12 @@
             if (result && result.success) {
                 showToast('Revisi dikirim ke tim!');
                 closeModal('revisionModal');
-                document.getElementById('actionButtons').classList.add('hidden');
                 loadPipeline();
             }
         }
 
         async function rejectBrief() {
             if (!currentContentId) return;
-
             var reason = prompt('Alasan penolakan:');
             if (!reason) return;
 
@@ -1375,12 +1125,11 @@
 
             if (result && result.success) {
                 showToast('Konten ditolak');
-                document.getElementById('actionButtons').classList.add('hidden');
                 loadPipeline();
             }
         }
 
-        // PIPELINE & ANALYTICS
+        // DASHBOARD
         async function loadDashboard() {
             var pipeline = await apiCall('getPipeline');
             var analytics = await apiCall('getAnalytics');
@@ -1413,6 +1162,7 @@
             }).join('') : '<p class="text-sm text-gray-400">Belum ada konten published.</p>';
         }
 
+        // PIPELINE
         async function loadPipeline() {
             var result = await apiCall('getPipeline');
             if (!result) return;
@@ -1457,6 +1207,7 @@
             grid.innerHTML = html;
         }
 
+        // ANALYTICS
         async function loadAnalytics() {
             var result = await apiCall('getAnalytics');
             if (!result) return;
@@ -1513,6 +1264,7 @@
             }
         }
 
+        // TALENT POOL
         async function loadTalentPool() {
             var result = await apiCall('getTalentProfiles');
             if (!result || !result.talents) return;
@@ -1537,7 +1289,6 @@
                 var availLabel = isAvailable ? 'Available' : (talent.availability || 'Tidak Tersedia');
                 var successColor = talent.successRate >= 70 ? 'text-green-600' : 'text-yellow-600';
 
-                // Character note badge styling
                 var characterBadge = '';
                 if (talent.characterNotes) {
                     characterBadge = '<div class="mt-3 bg-bc-primary/5 rounded-lg p-3 border border-bc-primary/10"><p class="text-xs text-bc-primary font-medium mb-1"><i class="fas fa-theater-masks mr-1"></i>Karakter</p><p class="text-sm text-gray-800">' + escapeHtml(talent.characterNotes) + '</p></div>';
@@ -1577,24 +1328,11 @@
 
         function loadSettings() {
             document.getElementById('gasUrl').value = CONFIG.GAS_URL;
-            // API Key dan Sheet ID sekarang backend-managed, tampilkan info saja
-            document.getElementById('apiKey').value = backendInfo ? 'Tersimpan di backend' : '';
-            document.getElementById('sheetId').value = backendInfo ? 'Dikelola backend' : '';
         }
 
         function saveSettings() {
             CONFIG.GAS_URL = document.getElementById('gasUrl').value;
             localStorage.setItem('gasUrl', CONFIG.GAS_URL);
-
-            // Hanya kirim preferensi ke backend, bukan API key / sheet ID
-            if (CONFIG.GAS_URL) {
-                apiCall('saveSettings', 'POST', {
-                    RISK_THRESHOLD: document.getElementById('riskThreshold').value,
-                    AUTO_APPROVE_SCORE: document.getElementById('autoApproveScore').value,
-                    TALENT_MATCH_MIN_SCORE: document.getElementById('talentMinScore').value
-                });
-            }
-
             showToast('Settings disimpan!');
         }
 
@@ -1604,6 +1342,7 @@
             return num.toString();
         }
 
+        // CONTENT DETAIL
         async function viewContentDetail(contentId) {
             var result = await apiCall('getContentDetail', 'GET', { id: contentId });
             if (!result || result.error) {
@@ -1691,7 +1430,6 @@
                 showToast('Silakan atur GAS URL di Settings terlebih dahulu', 'error');
                 updateConnectionStatus('disconnected', 'No URL');
             } else {
-                // Auto-test connection dan load dashboard
                 testConnection().then(function(ok) {
                     if (ok) {
                         loadDashboard();
